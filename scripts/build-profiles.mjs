@@ -152,6 +152,24 @@ function presetSlot(slot) {
 function dial(param, title) {
   return action("com.cursor.lightroom.slider-dial", "Develop Dial", { param }, title, "slider-dial");
 }
+function labelFilter(labels, title) {
+  return action(
+    "com.cursor.lightroom.label-filter",
+    "Label Filter",
+    { labels, title },
+    title,
+    "label",
+  );
+}
+function flagCount(display, onPress, title) {
+  return action(
+    "com.cursor.lightroom.flag-count",
+    "Flag Count",
+    { display, onPress },
+    title,
+    "flag",
+  );
+}
 
 function buildXlPages() {
   // Page 1 — Cull & Develop
@@ -211,12 +229,12 @@ function buildXlPages() {
   presets["6,2"] = slider("Clarity", "up", "Clarity +");
   presets["7,2"] = slider("Vibrance", "up", "Vib +");
 
-  presets["0,3"] = cmd("showModule", "Library", { module: "library" });
-  presets["1,3"] = cmd("showModule", "Develop", { module: "develop" });
-  presets["2,3"] = cmd("showView", "Loupe", { view: "loupe" });
-  presets["3,3"] = cmd("showView", "Grid", { view: "grid" });
-  presets["4,3"] = cmd("showView", "B/A", { view: "develop_before_after_horiz" });
-  presets["5,3"] = cmd("zoomOneToOne", "1:1");
+  presets["0,3"] = labelFilter("blue-green", "Blue+\nGreen");
+  presets["1,3"] = flagCount("pick", "filter-pick", "Flagged\n…");
+  presets["2,3"] = flagCount("both", "refresh", "P/R\n…");
+  presets["3,3"] = cmd("showModule", "Library", { module: "library" });
+  presets["4,3"] = cmd("showModule", "Develop", { module: "develop" });
+  presets["5,3"] = cmd("showView", "Grid", { view: "grid" });
   presets["6,3"] = cmd("selectBackground", "Bg");
   presets["7,3"] = cmd("selectPeople", "People");
 

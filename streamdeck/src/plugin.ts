@@ -3,7 +3,9 @@ import streamDeck from "@elgato/streamdeck";
 import { CommandAction } from "./actions/command";
 import { ConnectionAction, wireConnectionUpdates } from "./actions/connection";
 import { FlagAction } from "./actions/flag";
+import { FlagCountAction } from "./actions/flag-count";
 import { LabelAction } from "./actions/label";
+import { LabelFilterAction } from "./actions/label-filter";
 import { NavigateAction } from "./actions/navigate";
 import { PresetApplyAction } from "./actions/preset-apply";
 import { PresetNavAction } from "./actions/preset-nav";
@@ -24,6 +26,8 @@ const commandAction = new CommandAction();
 const presetNavAction = new PresetNavAction();
 const presetSlotAction = new PresetSlotAction();
 const presetApplyAction = new PresetApplyAction();
+const labelFilterAction = new LabelFilterAction();
+const flagCountAction = new FlagCountAction();
 
 streamDeck.actions.registerAction(connectionAction);
 streamDeck.actions.registerAction(ratingAction);
@@ -36,6 +40,8 @@ streamDeck.actions.registerAction(commandAction);
 streamDeck.actions.registerAction(presetNavAction);
 streamDeck.actions.registerAction(presetSlotAction);
 streamDeck.actions.registerAction(presetApplyAction);
+streamDeck.actions.registerAction(labelFilterAction);
+streamDeck.actions.registerAction(flagCountAction);
 
 wireConnectionUpdates(connectionAction);
 
@@ -63,6 +69,12 @@ bridge.on("state", () => {
   }
   for (const a of presetSlotAction.actions) {
     void a.getSettings().then((settings) => presetSlotAction.paint(a, settings));
+  }
+  for (const a of labelFilterAction.actions) {
+    void a.getSettings().then((settings) => labelFilterAction.paint(a, settings));
+  }
+  for (const a of flagCountAction.actions) {
+    void a.getSettings().then((settings) => flagCountAction.paint(a, settings));
   }
 });
 

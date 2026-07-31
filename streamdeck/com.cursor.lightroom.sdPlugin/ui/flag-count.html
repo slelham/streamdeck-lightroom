@@ -1,0 +1,29 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Flag Count</title>
+    <script src="https://sdpi-toolkit.elgato.com/toolkit/v3/sdpi-components.js"></script>
+  </head>
+  <body>
+    <sdpi-item label="Display">
+      <sdpi-select setting="display" default="pick">
+        <option value="pick">Flagged (picks) count</option>
+        <option value="reject">Rejects count</option>
+        <option value="both">Picks + rejects</option>
+      </sdpi-select>
+    </sdpi-item>
+    <sdpi-item label="On press">
+      <sdpi-select setting="onPress" default="filter-pick">
+        <option value="filter-pick">Filter Library to flagged</option>
+        <option value="filter-reject">Filter Library to rejects</option>
+        <option value="clear-filter">Clear Library filter</option>
+        <option value="refresh">Refresh count only</option>
+        <option value="none">Do nothing (display only)</option>
+      </sdpi-select>
+    </sdpi-item>
+    <p style="padding: 0 12px 12px; opacity: 0.75; font-size: 12px">
+      Counts come from the Lightroom catalog (cached a few seconds). Press refreshes and can jump the Library filter to flagged photos.
+    </p>
+  </body>
+</html>

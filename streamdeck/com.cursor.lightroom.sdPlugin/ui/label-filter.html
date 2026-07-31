@@ -1,0 +1,28 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Label Filter</title>
+    <script src="https://sdpi-toolkit.elgato.com/toolkit/v3/sdpi-components.js"></script>
+  </head>
+  <body>
+    <sdpi-item label="Show labels">
+      <sdpi-select setting="labels" default="blue-green">
+        <option value="blue-green">Blue + Green only</option>
+        <option value="blue">Blue only</option>
+        <option value="green">Green only</option>
+        <option value="red">Red only</option>
+        <option value="yellow">Yellow only</option>
+        <option value="purple">Purple only</option>
+        <option value="red,yellow">Red + Yellow</option>
+        <option value="blue,green,purple">Blue + Green + Purple</option>
+      </sdpi-select>
+    </sdpi-item>
+    <sdpi-item label="Custom title">
+      <sdpi-textfield setting="title" placeholder="Optional key title"></sdpi-textfield>
+    </sdpi-item>
+    <p style="padding: 0 12px 12px; opacity: 0.75; font-size: 12px">
+      Toggles Lightroom’s Library attribute filter so only the chosen color labels are visible. Press again to clear.
+    </p>
+  </body>
+</html>

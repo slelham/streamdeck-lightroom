@@ -30,6 +30,21 @@ export interface PresetBrowserState {
   folders?: PresetFolder[];
 }
 
+export interface FlagCounts {
+  pick?: number;
+  reject?: number;
+  totalFlagged?: number;
+  cached?: boolean;
+}
+
+export interface ViewFilterSummary {
+  active?: boolean;
+  labels?: string[];
+  pick?: string;
+  green?: boolean;
+  blue?: boolean;
+}
+
 export interface LightroomState {
   type?: "state";
   module?: string;
@@ -39,6 +54,8 @@ export interface LightroomState {
   tool?: string;
   params?: Record<string, number>;
   presetBrowser?: PresetBrowserState;
+  flagCounts?: FlagCounts;
+  viewFilter?: ViewFilterSummary;
 }
 
 export interface AckMessage {

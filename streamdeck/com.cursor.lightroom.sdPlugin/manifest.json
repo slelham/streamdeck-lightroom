@@ -2,7 +2,7 @@
   "$schema": "https://schemas.elgato.com/streamdeck/plugins/manifest.json",
   "UUID": "com.cursor.lightroom",
   "Name": "Lightroom Classic",
-  "Version": "1.1.1.0",
+  "Version": "1.2.0.0",
   "Author": "Cursor",
   "Category": "Lightroom Classic",
   "CategoryIcon": "imgs/category",
@@ -213,6 +213,44 @@
       "States": [
         {
           "Image": "imgs/actions/preset",
+          "TitleAlignment": "middle",
+          "FontSize": 11
+        }
+      ]
+    },
+    {
+      "Name": "Label Filter",
+      "UUID": "com.cursor.lightroom.label-filter",
+      "Icon": "imgs/actions/label",
+      "Tooltip": "Show only photos with selected color labels (e.g. blue + green). Toggle on/off.",
+      "PropertyInspectorPath": "ui/label-filter.html",
+      "Controllers": ["Keypad"],
+      "DisableAutomaticStates": true,
+      "States": [
+        {
+          "Image": "imgs/actions/label",
+          "Name": "Filter on",
+          "TitleAlignment": "middle",
+          "FontSize": 11
+        },
+        {
+          "Image": "imgs/actions/label",
+          "Name": "Filter off",
+          "TitleAlignment": "middle",
+          "FontSize": 11
+        }
+      ]
+    },
+    {
+      "Name": "Flag Count",
+      "UUID": "com.cursor.lightroom.flag-count",
+      "Icon": "imgs/actions/flag",
+      "Tooltip": "Live count of flagged photos. Optionally filter the Library to flagged/rejects.",
+      "PropertyInspectorPath": "ui/flag-count.html",
+      "Controllers": ["Keypad"],
+      "States": [
+        {
+          "Image": "imgs/actions/flag",
           "TitleAlignment": "middle",
           "FontSize": 11
         }

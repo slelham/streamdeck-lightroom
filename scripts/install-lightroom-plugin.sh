@@ -5,7 +5,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 SRC="$ROOT/lightroom/StreamDeckLightroom.lrplugin"
 
 # Basic sanity: required files present
-for f in Info.lua InitPlugin.lua Bridge.lua Actions.lua Presets.lua Json.lua Config.lua; do
+for f in Info.lua InitPlugin.lua Bridge.lua Actions.lua Presets.lua Library.lua Json.lua Config.lua; do
   if [[ ! -f "$SRC/$f" ]]; then
     echo "Missing $f in Lightroom plugin bundle" >&2
     exit 1

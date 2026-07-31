@@ -9,6 +9,7 @@ local LrUndo = import "LrUndo"
 local LrTasks = import "LrTasks"
 
 local Config = require "Config"
+local Library = require "Library"
 local Presets = require "Presets"
 
 local Actions = {}
@@ -86,9 +87,26 @@ function Actions.getState(opts)
 			browser.folders = nil
 			state.presetBrowser = browser
 		end
-	elseif _G.SDLR and _G.SDLR.lastState and _G.SDLR.lastState.presetBrowser then
-		-- Preserve last browser snapshot on light updates
-		state.presetBrowser = _G.SDLR.lastState.presetBrowser
+
+		local okCounts, counts = pcall(function()
+			return Library.getFlagCounts(false)
+		end)
+		if okCounts and type(counts) == "table" then
+			state.flagCounts = counts
+		end
+
+		local okFilter, filter = pcall(function()
+			return Library.summarizeFilter(Library.getViewFilter())
+		end)
+		if okFilter and type(filter) == "table" then
+			state.viewFilter = filter
+		end
+	else
+		if _G.SDLR and _G.SDLR.lastState then
+			state.presetBrowser = _G.SDLR.lastState.presetBrowser
+			state.flagCounts = _G.SDLR.lastState.flagCounts
+			state.viewFilter = _G.SDLR.lastState.viewFilter
+		end
 	end
 
 	return state
@@ -135,6 +153,7 @@ function Actions.handle(msg)
 		else
 			LrSelection.removeFlag()
 		end
+		Library.invalidateCounts()
 		return true
 	end
 
@@ -381,6 +400,79 @@ function Actions.handle(msg)
 			return Presets.applySlot(msg.slot, tonumber(msg.pageSize))
 		end
 		return false, "missing uuid or slot"
+	end
+
+	if cmd == "setLabelFilter" then
+		local labels = msg.labels
+		if type(labels) == "string" then
+			-- "blue,green" or "blue-green"
+			local list = {}
+			for part in string.gmatch(labels, "[^,;%-%s]+") do
+				list[#list + 1] = part
+			end
+			labels = list
+		end
+		if type(labels) ~= "table" then
+			return false, "missing labels"
+		end
+		return Library.setLabelFilter(labels, { keepPick = msg.keepPick })
+	end
+
+	if cmd == "clearLabelFilter" or cmd == "clearViewFilter" then
+		return Library.clearAttributeFilter()
+	end
+
+	if cmd == "toggleLabelFilter" then
+		local labels = msg.labels
+		if type(labels) == "string" then
+			local list = {}
+			for part in string.gmatch(labels, "[^,;%-%s]+") do
+				list[#list + 1] = part
+			end
+			labels = list
+		end
+		if type(labels) ~= "table" or #labels == 0 then
+			labels = { "blue", "green" }
+		end
+		local summary = Library.summarizeFilter(Library.getViewFilter())
+		local already = summary.active
+		if already then
+			-- If currently filtering exactly these labels (order-insensitive), clear; else apply
+			local wanted = {}
+			for _, n in ipairs(labels) do
+				wanted[string.lower(n)] = true
+			end
+			local current = {}
+			for _, n in ipairs(summary.labels or {}) do
+				current[string.lower(n)] = true
+			end
+			local same = true
+			local countWanted = 0
+			for k, _ in pairs(wanted) do
+				countWanted = countWanted + 1
+				if not current[k] then
+					same = false
+					break
+				end
+			end
+			local countCurrent = 0
+			for _ in pairs(current) do
+				countCurrent = countCurrent + 1
+			end
+			if same and countWanted == countCurrent and (summary.pick or "") == "" then
+				return Library.clearAttributeFilter()
+			end
+		end
+		return Library.setLabelFilter(labels, { keepPick = false })
+	end
+
+	if cmd == "setPickFilter" then
+		return Library.setPickFilter(msg.pick or "flagged")
+	end
+
+	if cmd == "getFlagCounts" then
+		Library.invalidateCounts()
+		return true, Library.getFlagCounts(true)
 	end
 
 	return false, "unknown cmd: " .. tostring(cmd)

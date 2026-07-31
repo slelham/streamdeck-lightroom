@@ -199,9 +199,15 @@ export class LightroomBridge extends EventEmitter {
 
     if (msg.type === "state") {
       const incoming = msg as LightroomState;
-      // Light heartbeats may omit presetBrowser; keep the last one
+      // Light heartbeats may omit heavier fields; keep the last snapshots
       if (!incoming.presetBrowser && this.lastState.presetBrowser) {
         incoming.presetBrowser = this.lastState.presetBrowser;
+      }
+      if (!incoming.flagCounts && this.lastState.flagCounts) {
+        incoming.flagCounts = this.lastState.flagCounts;
+      }
+      if (!incoming.viewFilter && this.lastState.viewFilter) {
+        incoming.viewFilter = this.lastState.viewFilter;
       }
       this.lastState = incoming;
       this.emit("state", this.lastState);
@@ -213,25 +219,44 @@ export class LightroomBridge extends EventEmitter {
       const data = (msg as { data?: Record<string, unknown> }).data;
       if (!data) return;
 
-      const hasBrowser =
-        Array.isArray(data.slots) || typeof data.folderName === "string";
-      const hasState =
-        data.params != null ||
-        data.rating != null ||
-        data.presetBrowser != null ||
-        data.folders != null;
+      let changed = false;
+      const next: LightroomState = { ...this.lastState };
 
-      if (hasBrowser) {
-        this.lastState = {
-          ...this.lastState,
-          presetBrowser: {
-            ...(this.lastState.presetBrowser || {}),
-            ...(data as LightroomState["presetBrowser"]),
-          },
+      if (Array.isArray(data.slots) || typeof data.folderName === "string") {
+        next.presetBrowser = {
+          ...(this.lastState.presetBrowser || {}),
+          ...(data as LightroomState["presetBrowser"]),
         };
-        this.emit("state", this.lastState);
-      } else if (hasState) {
-        this.lastState = { ...this.lastState, ...(data as LightroomState) };
+        changed = true;
+      }
+
+      if (data.flagCounts && typeof data.flagCounts === "object") {
+        next.flagCounts = data.flagCounts as LightroomState["flagCounts"];
+        changed = true;
+      } else if (data.pick != null || data.reject != null) {
+        next.flagCounts = {
+          pick: Number(data.pick ?? 0),
+          reject: Number(data.reject ?? 0),
+          totalFlagged: Number(data.totalFlagged ?? data.pick ?? 0),
+        };
+        changed = true;
+      }
+
+      if (data.filter && typeof data.filter === "object") {
+        next.viewFilter = data.filter as LightroomState["viewFilter"];
+        changed = true;
+      } else if (data.viewFilter && typeof data.viewFilter === "object") {
+        next.viewFilter = data.viewFilter as LightroomState["viewFilter"];
+        changed = true;
+      }
+
+      if (data.params != null || data.rating != null || data.module != null) {
+        Object.assign(next, data as LightroomState);
+        changed = true;
+      }
+
+      if (changed) {
+        this.lastState = next;
         this.emit("state", this.lastState);
       }
     }
