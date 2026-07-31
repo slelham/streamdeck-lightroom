@@ -1,0 +1,37 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Develop Slider</title>
+    <script src="https://sdpi-toolkit.elgato.com/toolkit/v3/sdpi-components.js"></script>
+  </head>
+  <body>
+    <sdpi-item label="Parameter">
+      <sdpi-select setting="param" default="Exposure">
+        <option value="Exposure">Exposure</option>
+        <option value="Contrast">Contrast</option>
+        <option value="Highlights">Highlights</option>
+        <option value="Shadows">Shadows</option>
+        <option value="Whites">Whites</option>
+        <option value="Blacks">Blacks</option>
+        <option value="Temperature">Temperature</option>
+        <option value="Tint">Tint</option>
+        <option value="Texture">Texture</option>
+        <option value="Clarity">Clarity</option>
+        <option value="Dehaze">Dehaze</option>
+        <option value="Vibrance">Vibrance</option>
+        <option value="Saturation">Saturation</option>
+      </sdpi-select>
+    </sdpi-item>
+    <sdpi-item label="Direction">
+      <sdpi-select setting="direction" default="up">
+        <option value="up">Increase (+)</option>
+        <option value="down">Decrease (−)</option>
+        <option value="reset">Reset</option>
+      </sdpi-select>
+    </sdpi-item>
+    <sdpi-item label="Step">
+      <sdpi-textfield setting="step" placeholder="e.g. 0.1 for Exposure"></sdpi-textfield>
+    </sdpi-item>
+  </body>
+</html>

@@ -1,0 +1,65 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Lightroom Command</title>
+    <script src="https://sdpi-toolkit.elgato.com/toolkit/v3/sdpi-components.js"></script>
+  </head>
+  <body>
+    <sdpi-item label="Command">
+      <sdpi-select setting="command" default="undo">
+        <option value="undo">Undo</option>
+        <option value="redo">Redo</option>
+        <option value="autoTone">Auto Tone</option>
+        <option value="resetAll">Reset All</option>
+        <option value="zoomToggle">Zoom Toggle</option>
+        <option value="zoomOneToOne">Zoom 1:1</option>
+        <option value="copySettings">Copy Settings</option>
+        <option value="pasteSettings">Paste Settings</option>
+        <option value="editInPhotoshop">Edit in Photoshop</option>
+        <option value="selectSubject">AI Select Subject</option>
+        <option value="selectSky">AI Select Sky</option>
+        <option value="selectBackground">AI Select Background</option>
+        <option value="selectPeople">AI Select People</option>
+        <option value="showModule">Switch Module</option>
+        <option value="showView">Switch View</option>
+        <option value="selectTool">Select Tool</option>
+        <option value="createMask">Create Mask</option>
+      </sdpi-select>
+    </sdpi-item>
+    <sdpi-item label="Module">
+      <sdpi-select setting="module" default="develop">
+        <option value="library">Library</option>
+        <option value="develop">Develop</option>
+        <option value="map">Map</option>
+        <option value="book">Book</option>
+        <option value="slideshow">Slideshow</option>
+        <option value="print">Print</option>
+        <option value="web">Web</option>
+      </sdpi-select>
+    </sdpi-item>
+    <sdpi-item label="View">
+      <sdpi-select setting="view" default="loupe">
+        <option value="loupe">Loupe</option>
+        <option value="grid">Grid</option>
+        <option value="compare">Compare</option>
+        <option value="survey">Survey</option>
+        <option value="develop_before_after_horiz">Before/After Horiz</option>
+        <option value="develop_before_after_vert">Before/After Vert</option>
+        <option value="develop_before">Before Only</option>
+      </sdpi-select>
+    </sdpi-item>
+    <sdpi-item label="Tool">
+      <sdpi-select setting="tool" default="crop">
+        <option value="loupe">Loupe</option>
+        <option value="crop">Crop</option>
+        <option value="dust">Healing</option>
+        <option value="redeye">Red Eye</option>
+        <option value="masking">Masking</option>
+      </sdpi-select>
+    </sdpi-item>
+    <sdpi-item label="Custom title">
+      <sdpi-textfield setting="title" placeholder="Optional key title override"></sdpi-textfield>
+    </sdpi-item>
+  </body>
+</html>

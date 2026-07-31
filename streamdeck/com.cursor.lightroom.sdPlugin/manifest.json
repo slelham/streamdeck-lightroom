@@ -1,0 +1,177 @@
+{
+  "$schema": "https://schemas.elgato.com/streamdeck/plugins/manifest.json",
+  "UUID": "com.cursor.lightroom",
+  "Name": "Lightroom Classic",
+  "Version": "1.0.0.0",
+  "Author": "Cursor",
+  "Category": "Lightroom Classic",
+  "CategoryIcon": "imgs/category",
+  "Icon": "imgs/plugin",
+  "Description": "Two-way Lightroom Classic controls: live develop sliders, culling feedback, dials, AI masks, and more. Requires the included Lightroom companion plug-in.",
+  "CodePath": "bin/plugin.js",
+  "SDKVersion": 2,
+  "Software": {
+    "MinimumVersion": "6.9"
+  },
+  "OS": [
+    {
+      "Platform": "mac",
+      "MinimumVersion": "12"
+    },
+    {
+      "Platform": "windows",
+      "MinimumVersion": "10"
+    }
+  ],
+  "Nodejs": {
+    "Version": "20",
+    "Debug": "enabled"
+  },
+  "Actions": [
+    {
+      "Name": "Connection",
+      "UUID": "com.cursor.lightroom.connection",
+      "Icon": "imgs/actions/connection",
+      "Tooltip": "Shows whether the Lightroom bridge is online. Press to refresh.",
+      "Controllers": ["Keypad"],
+      "States": [
+        {
+          "Image": "imgs/actions/connection-on",
+          "TitleAlignment": "middle",
+          "FontSize": 12
+        },
+        {
+          "Image": "imgs/actions/connection-off",
+          "TitleAlignment": "middle",
+          "FontSize": 12
+        }
+      ]
+    },
+    {
+      "Name": "Rating",
+      "UUID": "com.cursor.lightroom.rating",
+      "Icon": "imgs/actions/rating",
+      "Tooltip": "Set or adjust star ratings with live feedback.",
+      "PropertyInspectorPath": "ui/rating.html",
+      "Controllers": ["Keypad", "Encoder"],
+      "States": [
+        {
+          "Image": "imgs/actions/rating",
+          "TitleAlignment": "middle",
+          "FontSize": 11
+        }
+      ],
+      "Encoder": {
+        "layout": "$A1",
+        "TriggerDescription": {
+          "Rotate": "Change rating",
+          "Push": "N/A"
+        }
+      }
+    },
+    {
+      "Name": "Flag",
+      "UUID": "com.cursor.lightroom.flag",
+      "Icon": "imgs/actions/flag",
+      "Tooltip": "Pick, reject, or unflag the current photo.",
+      "PropertyInspectorPath": "ui/flag.html",
+      "Controllers": ["Keypad"],
+      "States": [
+        {
+          "Image": "imgs/actions/flag",
+          "TitleAlignment": "middle",
+          "FontSize": 11
+        }
+      ]
+    },
+    {
+      "Name": "Color Label",
+      "UUID": "com.cursor.lightroom.label",
+      "Icon": "imgs/actions/label",
+      "Tooltip": "Toggle a color label on the current photo.",
+      "PropertyInspectorPath": "ui/label.html",
+      "Controllers": ["Keypad"],
+      "States": [
+        {
+          "Image": "imgs/actions/label",
+          "TitleAlignment": "middle",
+          "FontSize": 11
+        }
+      ]
+    },
+    {
+      "Name": "Navigate",
+      "UUID": "com.cursor.lightroom.navigate",
+      "Icon": "imgs/actions/navigate",
+      "Tooltip": "Go to the next or previous photo.",
+      "PropertyInspectorPath": "ui/navigate.html",
+      "Controllers": ["Keypad", "Encoder"],
+      "States": [
+        {
+          "Image": "imgs/actions/navigate",
+          "TitleAlignment": "middle",
+          "FontSize": 11
+        }
+      ],
+      "Encoder": {
+        "layout": "$A1",
+        "TriggerDescription": {
+          "Rotate": "Next / previous photo"
+        }
+      }
+    },
+    {
+      "Name": "Develop Slider",
+      "UUID": "com.cursor.lightroom.slider",
+      "Icon": "imgs/actions/slider",
+      "Tooltip": "Nudge a Develop slider with live value on the key. Hold to repeat.",
+      "PropertyInspectorPath": "ui/slider.html",
+      "Controllers": ["Keypad"],
+      "States": [
+        {
+          "Image": "imgs/actions/slider",
+          "TitleAlignment": "middle",
+          "FontSize": 11
+        }
+      ]
+    },
+    {
+      "Name": "Develop Dial",
+      "UUID": "com.cursor.lightroom.slider-dial",
+      "Icon": "imgs/actions/slider-dial",
+      "Tooltip": "Rotate to adjust a Develop slider with live LCD feedback. Press to reset.",
+      "PropertyInspectorPath": "ui/slider-dial.html",
+      "Controllers": ["Encoder"],
+      "States": [
+        {
+          "Image": "imgs/actions/slider-dial",
+          "TitleAlignment": "middle",
+          "FontSize": 11
+        }
+      ],
+      "Encoder": {
+        "layout": "$A1",
+        "TriggerDescription": {
+          "Rotate": "Adjust slider",
+          "Push": "Reset slider",
+          "Touch": "Refresh value"
+        }
+      }
+    },
+    {
+      "Name": "Lightroom Command",
+      "UUID": "com.cursor.lightroom.command",
+      "Icon": "imgs/actions/command",
+      "Tooltip": "Undo, Auto Tone, AI masks, tools, modules, views, and more.",
+      "PropertyInspectorPath": "ui/command.html",
+      "Controllers": ["Keypad"],
+      "States": [
+        {
+          "Image": "imgs/actions/command",
+          "TitleAlignment": "middle",
+          "FontSize": 11
+        }
+      ]
+    }
+  ]
+}
