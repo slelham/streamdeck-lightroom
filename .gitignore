@@ -2,7 +2,7 @@ node_modules/
 dist/
 *.log
 .DS_Store
-streamdeck/com.cursor.lightroom.sdPlugin/bin/
+streamdeck/com.cursor.lightroom.sdPlugin/bin/*.map
 streamdeck/com.cursor.lightroom.sdPlugin/logs/
 *.sdPlugin.zip
 .idea/
