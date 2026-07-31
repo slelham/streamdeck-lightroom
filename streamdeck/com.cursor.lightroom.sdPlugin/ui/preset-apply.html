@@ -1,0 +1,28 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Apply Preset</title>
+    <script src="https://sdpi-toolkit.elgato.com/toolkit/v3/sdpi-components.js"></script>
+  </head>
+  <body>
+    <sdpi-item label="Preset">
+      <sdpi-select
+        setting="uuid"
+        datasource="getPresets"
+        loading="Loading Lightroom presets…"
+        placeholder="Select a develop preset"
+        hot-reload
+      ></sdpi-select>
+    </sdpi-item>
+    <sdpi-item label="Display name">
+      <sdpi-textfield setting="name" placeholder="Optional title override"></sdpi-textfield>
+    </sdpi-item>
+    <sdpi-item label="Folder">
+      <sdpi-textfield setting="folder" placeholder="Optional folder label"></sdpi-textfield>
+    </sdpi-item>
+    <p style="padding: 0 12px 12px; opacity: 0.75; font-size: 12px">
+      The preset list is loaded live from Lightroom Classic over the local bridge.
+    </p>
+  </body>
+</html>

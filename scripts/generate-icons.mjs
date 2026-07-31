@@ -100,6 +100,7 @@ const icons = {
   "actions/slider.png": roundedRectIcon([40, 40, 45, 255], [240, 180, 60, 255]),
   "actions/slider-dial.png": circleIcon([40, 40, 45, 255], [240, 180, 60, 255]),
   "actions/command.png": roundedRectIcon([45, 45, 50, 255], [180, 180, 190, 255]),
+  "actions/preset.png": roundedRectIcon([55, 40, 70, 255], [210, 160, 255, 255]),
 };
 
 fs.mkdirSync(path.join(outDir, "actions"), { recursive: true });

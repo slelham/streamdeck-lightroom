@@ -1,5 +1,35 @@
 export type FlagState = -1 | 0 | 1 | number;
 
+export interface PresetInfo {
+  name: string;
+  uuid: string;
+}
+
+export interface PresetFolder {
+  name: string;
+  presets?: PresetInfo[];
+  count?: number;
+}
+
+export interface PresetSlot {
+  index: number;
+  name: string;
+  uuid?: string | null;
+  empty?: boolean;
+}
+
+export interface PresetBrowserState {
+  folderCount?: number;
+  folderIndex?: number;
+  folderName?: string;
+  presetCount?: number;
+  pageIndex?: number;
+  pageCount?: number;
+  pageSize?: number;
+  slots?: PresetSlot[];
+  folders?: PresetFolder[];
+}
+
 export interface LightroomState {
   type?: "state";
   module?: string;
@@ -8,6 +38,7 @@ export interface LightroomState {
   label?: string;
   tool?: string;
   params?: Record<string, number>;
+  presetBrowser?: PresetBrowserState;
 }
 
 export interface AckMessage {

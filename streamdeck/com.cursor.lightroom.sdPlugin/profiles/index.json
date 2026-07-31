@@ -1,0 +1,17 @@
+[
+  {
+    "fileName": "lightroom-classic-xl",
+    "deviceType": 2,
+    "name": "Lightroom Classic XL"
+  },
+  {
+    "fileName": "lightroom-classic",
+    "deviceType": 0,
+    "name": "Lightroom Classic"
+  },
+  {
+    "fileName": "lightroom-classic-plus",
+    "deviceType": 7,
+    "name": "Lightroom Classic Plus"
+  }
+]

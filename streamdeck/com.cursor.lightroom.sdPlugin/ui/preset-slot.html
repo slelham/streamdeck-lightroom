@@ -1,0 +1,32 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Preset Slot</title>
+    <script src="https://sdpi-toolkit.elgato.com/toolkit/v3/sdpi-components.js"></script>
+  </head>
+  <body>
+    <sdpi-item label="Slot">
+      <sdpi-select setting="slot" default="1">
+        <option value="1">1</option>
+        <option value="2">2</option>
+        <option value="3">3</option>
+        <option value="4">4</option>
+        <option value="5">5</option>
+        <option value="6">6</option>
+        <option value="7">7</option>
+        <option value="8">8</option>
+      </sdpi-select>
+    </sdpi-item>
+    <sdpi-item label="Page size">
+      <sdpi-select setting="pageSize" default="8">
+        <option value="8">8</option>
+        <option value="6">6</option>
+        <option value="4">4</option>
+      </sdpi-select>
+    </sdpi-item>
+    <p style="padding: 0 12px; opacity: 0.8; font-size: 12px">
+      Slot keys show live presets from the current folder/page. Use Preset Browser Nav to change folder or page.
+    </p>
+  </body>
+</html>

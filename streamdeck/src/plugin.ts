@@ -5,6 +5,9 @@ import { ConnectionAction, wireConnectionUpdates } from "./actions/connection";
 import { FlagAction } from "./actions/flag";
 import { LabelAction } from "./actions/label";
 import { NavigateAction } from "./actions/navigate";
+import { PresetApplyAction } from "./actions/preset-apply";
+import { PresetNavAction } from "./actions/preset-nav";
+import { PresetSlotAction } from "./actions/preset-slot";
 import { RatingAction } from "./actions/rating";
 import { SliderAction } from "./actions/slider";
 import { SliderDialAction } from "./actions/slider-dial";
@@ -18,6 +21,9 @@ const navigateAction = new NavigateAction();
 const sliderAction = new SliderAction();
 const sliderDialAction = new SliderDialAction();
 const commandAction = new CommandAction();
+const presetNavAction = new PresetNavAction();
+const presetSlotAction = new PresetSlotAction();
+const presetApplyAction = new PresetApplyAction();
 
 streamDeck.actions.registerAction(connectionAction);
 streamDeck.actions.registerAction(ratingAction);
@@ -27,6 +33,9 @@ streamDeck.actions.registerAction(navigateAction);
 streamDeck.actions.registerAction(sliderAction);
 streamDeck.actions.registerAction(sliderDialAction);
 streamDeck.actions.registerAction(commandAction);
+streamDeck.actions.registerAction(presetNavAction);
+streamDeck.actions.registerAction(presetSlotAction);
+streamDeck.actions.registerAction(presetApplyAction);
 
 wireConnectionUpdates(connectionAction);
 
@@ -48,6 +57,12 @@ bridge.on("state", () => {
   }
   for (const a of sliderDialAction.actions) {
     void a.getSettings().then((settings) => sliderDialAction.paint(a, settings));
+  }
+  for (const a of presetNavAction.actions) {
+    void a.getSettings().then((settings) => presetNavAction.paint(a, settings));
+  }
+  for (const a of presetSlotAction.actions) {
+    void a.getSettings().then((settings) => presetSlotAction.paint(a, settings));
   }
 });
 

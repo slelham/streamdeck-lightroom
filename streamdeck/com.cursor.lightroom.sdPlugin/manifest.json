@@ -2,12 +2,12 @@
   "$schema": "https://schemas.elgato.com/streamdeck/plugins/manifest.json",
   "UUID": "com.cursor.lightroom",
   "Name": "Lightroom Classic",
-  "Version": "1.0.0.0",
+  "Version": "1.1.0.0",
   "Author": "Cursor",
   "Category": "Lightroom Classic",
   "CategoryIcon": "imgs/category",
   "Icon": "imgs/plugin",
-  "Description": "Two-way Lightroom Classic controls: live develop sliders, culling feedback, dials, AI masks, and more. Requires the included Lightroom companion plug-in.",
+  "Description": "Two-way Lightroom Classic controls: live develop sliders, culling feedback, dials, AI masks, live preset browser, and polished profile packs for XL / MK.2 / Plus. Requires the included Lightroom companion plug-in.",
   "CodePath": "bin/plugin.js",
   "SDKVersion": 2,
   "Software": {
@@ -172,6 +172,74 @@
           "FontSize": 11
         }
       ]
+    },
+    {
+      "Name": "Preset Browser Nav",
+      "UUID": "com.cursor.lightroom.preset-nav",
+      "Icon": "imgs/actions/preset",
+      "Tooltip": "Change Develop preset folder or page in the live browser.",
+      "PropertyInspectorPath": "ui/preset-nav.html",
+      "Controllers": ["Keypad", "Encoder"],
+      "States": [
+        {
+          "Image": "imgs/actions/preset",
+          "TitleAlignment": "middle",
+          "FontSize": 11
+        }
+      ]
+    },
+    {
+      "Name": "Preset Slot",
+      "UUID": "com.cursor.lightroom.preset-slot",
+      "Icon": "imgs/actions/preset",
+      "Tooltip": "Shows a live preset from the current browser page. Press to apply.",
+      "PropertyInspectorPath": "ui/preset-slot.html",
+      "Controllers": ["Keypad"],
+      "States": [
+        {
+          "Image": "imgs/actions/preset",
+          "TitleAlignment": "middle",
+          "FontSize": 11
+        }
+      ]
+    },
+    {
+      "Name": "Apply Preset",
+      "UUID": "com.cursor.lightroom.preset-apply",
+      "Icon": "imgs/actions/preset",
+      "Tooltip": "Pick any Develop preset from a live Lightroom list and apply it.",
+      "PropertyInspectorPath": "ui/preset-apply.html",
+      "Controllers": ["Keypad"],
+      "States": [
+        {
+          "Image": "imgs/actions/preset",
+          "TitleAlignment": "middle",
+          "FontSize": 11
+        }
+      ]
+    }
+  ],
+  "Profiles": [
+    {
+      "Name": "profiles/lightroom-classic-xl",
+      "DeviceType": 2,
+      "Readonly": false,
+      "DontAutoSwitchWhenInstalled": true,
+      "AutoInstall": true
+    },
+    {
+      "Name": "profiles/lightroom-classic",
+      "DeviceType": 0,
+      "Readonly": false,
+      "DontAutoSwitchWhenInstalled": true,
+      "AutoInstall": true
+    },
+    {
+      "Name": "profiles/lightroom-classic-plus",
+      "DeviceType": 7,
+      "Readonly": false,
+      "DontAutoSwitchWhenInstalled": true,
+      "AutoInstall": true
     }
   ]
 }

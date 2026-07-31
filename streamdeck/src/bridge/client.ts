@@ -165,8 +165,25 @@ export class LightroomBridge extends EventEmitter {
 
     if (msg.type === "ack") {
       this.emit("ack", msg);
-      if ((msg as { data?: LightroomState }).data?.params || (msg as { data?: LightroomState }).data?.rating != null) {
-        this.lastState = { ...this.lastState, ...(msg as { data: LightroomState }).data };
+      const data = (msg as { data?: Record<string, unknown> }).data;
+      if (!data) return;
+
+      const hasBrowser =
+        Array.isArray(data.slots) || typeof data.folderName === "string";
+      const hasState =
+        data.params != null ||
+        data.rating != null ||
+        data.presetBrowser != null ||
+        data.folders != null;
+
+      if (hasBrowser) {
+        this.lastState = {
+          ...this.lastState,
+          presetBrowser: data as LightroomState["presetBrowser"],
+        };
+        this.emit("state", this.lastState);
+      } else if (hasState) {
+        this.lastState = { ...this.lastState, ...(data as LightroomState) };
         this.emit("state", this.lastState);
       }
     }

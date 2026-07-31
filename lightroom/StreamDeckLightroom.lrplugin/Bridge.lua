@@ -162,7 +162,7 @@ function Bridge.start()
 				if _G.SDLR.sendConnected then
 					pushState()
 				end
-				LrTasks.sleep(0.5)
+				LrTasks.sleep(1.0)
 			end
 
 			if _G.SDLR.client then

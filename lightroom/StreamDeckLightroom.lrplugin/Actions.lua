@@ -9,6 +9,7 @@ local LrUndo = import "LrUndo"
 local LrTasks = import "LrTasks"
 
 local Config = require "Config"
+local Presets = require "Presets"
 
 local Actions = {}
 
@@ -52,6 +53,13 @@ function Actions.getState()
 		if okTool then
 			state.tool = tool
 		end
+	end
+
+	local okBrowser, browser = pcall(function()
+		return Presets.getBrowserState()
+	end)
+	if okBrowser and type(browser) == "table" then
+		state.presetBrowser = browser
 	end
 
 	return state
@@ -318,6 +326,32 @@ function Actions.handle(msg)
 			LrDevelopController.pasteSettings()
 		end)
 		return true
+	end
+
+	if cmd == "listPresets" then
+		local folders = Presets.listAll()
+		return true, { folders = folders }
+	end
+
+	if cmd == "presetBrowser" then
+		local browser = Presets.browserCommand(msg.action or "refresh", {
+			pageSize = tonumber(msg.pageSize),
+			folderIndex = tonumber(msg.folderIndex),
+			folderName = msg.folderName,
+			pageIndex = tonumber(msg.pageIndex),
+		})
+		return true, browser
+	end
+
+	if cmd == "applyPreset" then
+		ensureDevelop()
+		if msg.uuid then
+			return Presets.applyUuid(msg.uuid)
+		end
+		if msg.slot then
+			return Presets.applySlot(msg.slot, tonumber(msg.pageSize))
+		end
+		return false, "missing uuid or slot"
 	end
 
 	return false, "unknown cmd: " .. tostring(cmd)
