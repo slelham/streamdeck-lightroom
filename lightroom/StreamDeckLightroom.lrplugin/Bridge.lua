@@ -2,6 +2,11 @@
   Dual-port LrSocket bridge:
     RECEIVE_PORT  - Stream Deck -> Lightroom commands (JSON lines)
     SEND_PORT     - Lightroom -> Stream Deck state/events (JSON lines)
+
+  Notes from MIDI2LR / Adobe community:
+  - Do not reconnect from onError while a client is connected
+  - LrSocket timeout with no client is normal idle behavior
+  - onMessage must dispatch work via LrTasks.startAsyncTask
 ]]
 
 local LrDialogs = import "LrDialogs"
@@ -28,8 +33,12 @@ local function send(obj)
 	end
 end
 
-local function pushState()
-	local ok, state = pcall(Actions.getState)
+-- opts.light = skip heavy preset browser (heartbeats / slider scrubbing)
+local function pushState(opts)
+	opts = opts or {}
+	local ok, state = pcall(function()
+		return Actions.getState({ light = opts.light })
+	end)
 	if not ok or type(state) ~= "table" then
 		return
 	end
@@ -43,18 +52,28 @@ local function handleMessage(raw)
 		return
 	end
 
-	-- Support multiple newline-delimited messages in one chunk
 	for line in string.gmatch(raw, "[^\r\n]+") do
 		local msg = Json.decode(line)
 		if type(msg) == "table" and msg.cmd then
 			LrTasks.startAsyncTask(function()
-				local ok, resultOrErr = Actions.handle(msg)
+				-- pcall only keeps the first return value, so capture both inside
+				local handledOk, resultOrErr
+				local callOk, err = pcall(function()
+					handledOk, resultOrErr = Actions.handle(msg)
+				end)
+				if not callOk then
+					handledOk = false
+					resultOrErr = tostring(err)
+				else
+					handledOk = handledOk and true or false
+				end
+
 				local reply = {
 					type = "ack",
 					id = msg.id,
-					ok = ok and true or false,
+					ok = handledOk,
 				}
-				if ok then
+				if handledOk then
 					if type(resultOrErr) == "table" then
 						reply.data = resultOrErr
 					end
@@ -63,9 +82,9 @@ local function handleMessage(raw)
 				end
 				send(reply)
 
-				-- Always push fresh state after mutating commands
-				if msg.cmd ~= "ping" then
-					pushState()
+				-- Skip full refresh for chatty/read-only commands
+				if msg.cmd ~= "ping" and msg.cmd ~= "listPresets" and msg.cmd ~= "getState" then
+					pushState({ light = false })
 				end
 			end)
 		end
@@ -80,15 +99,18 @@ local function startSendSocket(context)
 		mode = "send",
 		onConnected = function()
 			_G.SDLR.sendConnected = true
-			pushState()
+			pushState({ light = false })
 		end,
 		onClosed = function()
 			_G.SDLR.sendConnected = false
 		end,
 		onError = function(socket, err)
-			_G.SDLR.sendConnected = false
-			if _G.SDLR.running and err == "timeout" then
-				socket:reconnect()
+			if err == "timeout" and _G.SDLR.running and not _G.SDLR.sendConnected then
+				pcall(function()
+					socket:reconnect()
+				end)
+			elseif err ~= "timeout" then
+				_G.SDLR.sendConnected = false
 			end
 		end,
 	}
@@ -105,22 +127,34 @@ local function startReceiveSocket(context)
 		end,
 		onClosed = function(socket)
 			_G.SDLR.receiveConnected = false
-			if _G.SDLR.running then
-				socket:reconnect()
+			if not _G.SDLR.running then
+				return
+			end
+			LrTasks.startAsyncTask(function()
+				LrTasks.sleep(0.2)
+				if not _G.SDLR.running then
+					return
+				end
+				pcall(function()
+					socket:reconnect()
+				end)
 				if _G.SDLR.server then
 					pcall(function()
 						_G.SDLR.server:close()
 					end)
 				end
+				_G.SDLR.sendConnected = false
 				startSendSocket(context)
-			end
+			end)
 		end,
 		onMessage = function(_, message)
 			handleMessage(message)
 		end,
 		onError = function(socket, err)
-			if err == "timeout" and _G.SDLR.running then
-				socket:reconnect()
+			if err == "timeout" and _G.SDLR.running and not _G.SDLR.receiveConnected then
+				pcall(function()
+					socket:reconnect()
+				end)
 			end
 		end,
 	}
@@ -134,33 +168,36 @@ function Bridge.start()
 
 	LrTasks.startAsyncTask(function()
 		LrFunctionContext.callWithContext("sdlr_bridge", function(context)
-			LrDialogs.attachErrorDialogToFunctionContext(context)
+			pcall(function()
+				LrDialogs.attachErrorDialogToFunctionContext(context)
+			end)
 
 			startReceiveSocket(context)
 			startSendSocket(context)
 
-			-- Observer for live develop slider updates
 			local observer = {}
 			local lastPush = 0
 			pcall(function()
 				LrDevelopController.revealAdjustedControls(true)
-				LrDevelopController.addAdjustmentChangeObserver(context, observer, function(obs)
+				LrDevelopController.addAdjustmentChangeObserver(context, observer, function()
 					if not _G.SDLR.sendConnected then
 						return
 					end
 					local now = os.clock()
-					if now - lastPush < 0.08 then
+					if now - lastPush < 0.1 then
 						return
 					end
 					lastPush = now
-					pushState()
+					pushState({ light = true })
 				end)
 			end)
 
+			local tick = 0
 			while _G.SDLR.running do
-				-- Periodic heartbeat/state so Stream Deck recovers after photo changes
 				if _G.SDLR.sendConnected then
-					pushState()
+					tick = tick + 1
+					-- Heartbeat every 1s (light); include preset browser every 5s
+					pushState({ light = (tick % 5) ~= 0 })
 				end
 				LrTasks.sleep(1.0)
 			end
@@ -175,6 +212,8 @@ function Bridge.start()
 					_G.SDLR.server:close()
 				end)
 			end
+			_G.SDLR.receiveConnected = false
+			_G.SDLR.sendConnected = false
 		end)
 	end)
 end

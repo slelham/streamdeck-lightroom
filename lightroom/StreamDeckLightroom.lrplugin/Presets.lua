@@ -137,14 +137,6 @@ function Presets.getBrowserState(pageSize)
 		end
 	end
 
-	local folderSummaries = {}
-	for i, f in ipairs(folders) do
-		folderSummaries[i] = {
-			name = f.name,
-			count = #(f.presets or {}),
-		}
-	end
-
 	browser.lastFolderName = folder.name
 
 	return {
@@ -156,7 +148,6 @@ function Presets.getBrowserState(pageSize)
 		pageCount = pageCount,
 		pageSize = browser.pageSize,
 		slots = slots,
-		folders = folderSummaries,
 	}
 end
 

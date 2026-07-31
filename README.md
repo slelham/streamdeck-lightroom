@@ -75,10 +75,17 @@ See [`docs/profiles.md`](docs/profiles.md) and [`docs/xl-layout.md`](docs/xl-lay
 ```bash
 cd streamdeck
 npm install
+npm run check          # build + tests + profile validation
 npm run watch          # rebuild + restart plugin
-npm test               # bridge smoke test
-npm run profiles       # rebuild .streamDeckProfile packs
 ```
+
+## Troubleshooting
+
+- **LR Offline** — Enable the Lightroom plug-in, quit and reopen Lightroom, press Connection. Ports: `59837` / `59838`.
+- **Sliders do nothing** — Needs Develop module + a selected photo.
+- **Preset slots show "—"** — Press Preset Browser → Refresh; confirm you have Develop presets.
+- **AI masks fail** — Needs newer Lightroom Classic; run Subject/Sky once inside LrC first.
+- **After editing Lua** — Quit and reopen Lightroom (reload often leaves sockets stuck).
 
 ## Protocol
 

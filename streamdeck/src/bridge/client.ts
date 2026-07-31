@@ -9,13 +9,6 @@ import {
   type LightroomState,
 } from "./types";
 
-export type BridgeEvents = {
-  state: [LightroomState];
-  connected: [];
-  disconnected: [];
-  ack: [BridgeInbound];
-};
-
 /**
  * Talks to the Lightroom companion plug-in over dual localhost TCP sockets.
  * Lightroom owns both listeners; we connect as clients.
@@ -23,13 +16,13 @@ export type BridgeEvents = {
 export class LightroomBridge extends EventEmitter {
   private commandSocket: net.Socket | null = null;
   private stateSocket: net.Socket | null = null;
-  private commandBuffer = "";
   private stateBuffer = "";
   private reconnectTimer: NodeJS.Timeout | null = null;
   private shouldRun = false;
   private nextId = 1;
   private _connected = false;
   private lastState: LightroomState = {};
+  private connectGeneration = 0;
 
   constructor(
     private receivePort = DEFAULT_RECEIVE_PORT,
@@ -53,6 +46,7 @@ export class LightroomBridge extends EventEmitter {
 
   stop(): void {
     this.shouldRun = false;
+    this.connectGeneration += 1;
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer);
       this.reconnectTimer = null;
@@ -72,7 +66,10 @@ export class LightroomBridge extends EventEmitter {
       id: command.id ?? String(this.nextId++),
       ...command,
     };
-    this.commandSocket.write(`${JSON.stringify(payload)}\n`);
+    const written = this.commandSocket.write(`${JSON.stringify(payload)}\n`);
+    if (!written) {
+      await new Promise<void>((resolve) => this.commandSocket?.once("drain", () => resolve()));
+    }
   }
 
   async sendSafe(command: BridgeCommand): Promise<boolean> {
@@ -82,6 +79,36 @@ export class LightroomBridge extends EventEmitter {
     } catch {
       return false;
     }
+  }
+
+  /** Wait for an ack with matching id (best-effort). */
+  sendAndWait(command: BridgeCommand, timeoutMs = 2000): Promise<BridgeInbound | null> {
+    const id = command.id ?? String(this.nextId++);
+    const payload = { ...command, id };
+
+    return new Promise((resolve) => {
+      const timer = setTimeout(() => {
+        this.off("ack", onAck);
+        resolve(null);
+      }, timeoutMs);
+
+      const onAck = (msg: BridgeInbound) => {
+        if ((msg as { id?: string }).id === id) {
+          clearTimeout(timer);
+          this.off("ack", onAck);
+          resolve(msg);
+        }
+      };
+
+      this.on("ack", onAck);
+      void this.sendSafe(payload).then((ok) => {
+        if (!ok) {
+          clearTimeout(timer);
+          this.off("ack", onAck);
+          resolve(null);
+        }
+      });
+    });
   }
 
   private connectBoth(): void {
@@ -94,22 +121,22 @@ export class LightroomBridge extends EventEmitter {
       return;
     }
 
+    const generation = this.connectGeneration;
     const socket = net.createConnection({ host: "127.0.0.1", port: this.receivePort });
     this.commandSocket = socket;
-    this.commandBuffer = "";
 
     socket.setEncoding("utf8");
-    socket.on("connect", () => this.refreshConnected());
-    socket.on("data", (chunk: string) => {
-      this.commandBuffer += chunk;
-      // Command port usually only acks via send port; ignore unexpected data.
-      this.commandBuffer = "";
+    socket.setKeepAlive(true, 5000);
+    socket.on("connect", () => {
+      if (generation !== this.connectGeneration) return;
+      this.refreshConnected();
+      this.requestInitialState();
     });
     socket.on("error", () => {
       /* reconnect loop handles this */
     });
     socket.on("close", () => {
-      this.commandSocket = null;
+      if (this.commandSocket === socket) this.commandSocket = null;
       this.refreshConnected();
       this.scheduleReconnect();
     });
@@ -120,17 +147,24 @@ export class LightroomBridge extends EventEmitter {
       return;
     }
 
+    const generation = this.connectGeneration;
     const socket = net.createConnection({ host: "127.0.0.1", port: this.sendPort });
     this.stateSocket = socket;
     this.stateBuffer = "";
 
     socket.setEncoding("utf8");
+    socket.setKeepAlive(true, 5000);
     socket.on("connect", () => {
+      if (generation !== this.connectGeneration) return;
       this.refreshConnected();
-      void this.sendSafe({ cmd: "getState" });
+      this.requestInitialState();
     });
     socket.on("data", (chunk: string) => {
       this.stateBuffer += chunk;
+      // Cap runaway buffers
+      if (this.stateBuffer.length > 1_000_000) {
+        this.stateBuffer = this.stateBuffer.slice(-100_000);
+      }
       let newline: number;
       while ((newline = this.stateBuffer.indexOf("\n")) >= 0) {
         const line = this.stateBuffer.slice(0, newline).trim();
@@ -143,10 +177,16 @@ export class LightroomBridge extends EventEmitter {
       /* reconnect loop handles this */
     });
     socket.on("close", () => {
-      this.stateSocket = null;
+      if (this.stateSocket === socket) this.stateSocket = null;
       this.refreshConnected();
       this.scheduleReconnect();
     });
+  }
+
+  private requestInitialState(): void {
+    if (!this._connected) return;
+    void this.sendSafe({ cmd: "getState" });
+    void this.sendSafe({ cmd: "presetBrowser", action: "refresh", pageSize: 8 });
   }
 
   private handleInbound(line: string): void {
@@ -158,7 +198,12 @@ export class LightroomBridge extends EventEmitter {
     }
 
     if (msg.type === "state") {
-      this.lastState = msg as LightroomState;
+      const incoming = msg as LightroomState;
+      // Light heartbeats may omit presetBrowser; keep the last one
+      if (!incoming.presetBrowser && this.lastState.presetBrowser) {
+        incoming.presetBrowser = this.lastState.presetBrowser;
+      }
+      this.lastState = incoming;
       this.emit("state", this.lastState);
       return;
     }
@@ -179,7 +224,10 @@ export class LightroomBridge extends EventEmitter {
       if (hasBrowser) {
         this.lastState = {
           ...this.lastState,
-          presetBrowser: data as LightroomState["presetBrowser"],
+          presetBrowser: {
+            ...(this.lastState.presetBrowser || {}),
+            ...(data as LightroomState["presetBrowser"]),
+          },
         };
         this.emit("state", this.lastState);
       } else if (hasState) {
@@ -211,7 +259,7 @@ export class LightroomBridge extends EventEmitter {
       if (!this.shouldRun) return;
       if (!this.commandSocket || this.commandSocket.destroyed) this.connectCommand();
       if (!this.stateSocket || this.stateSocket.destroyed) this.connectState();
-    }, 1000);
+    }, 750);
   }
 }
 

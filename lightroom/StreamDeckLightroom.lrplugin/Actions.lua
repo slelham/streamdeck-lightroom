@@ -27,20 +27,42 @@ local function safeCall(fn)
 end
 
 local function ensureDevelop()
-	if LrApplicationView.getCurrentModuleName() ~= "develop" then
-		LrApplicationView.switchToModule("develop")
-		LrTasks.sleep(0.15)
+	local mod
+	pcall(function()
+		mod = LrApplicationView.getCurrentModuleName()
+	end)
+	if mod ~= "develop" then
+		local ok = pcall(function()
+			LrApplicationView.switchToModule("develop")
+		end)
+		if ok then
+			LrTasks.sleep(0.2)
+		end
 	end
 end
 
-function Actions.getState()
+function Actions.getState(opts)
+	opts = opts or {}
 	local state = {
-		module = LrApplicationView.getCurrentModuleName(),
-		rating = LrSelection.getRating(),
-		flag = LrSelection.getFlag(),
-		label = LrSelection.getColorLabel(),
+		module = nil,
+		rating = 0,
+		flag = 0,
+		label = "none",
 		params = {},
 	}
+
+	pcall(function()
+		state.module = LrApplicationView.getCurrentModuleName()
+	end)
+	pcall(function()
+		state.rating = LrSelection.getRating() or 0
+	end)
+	pcall(function()
+		state.flag = LrSelection.getFlag() or 0
+	end)
+	pcall(function()
+		state.label = LrSelection.getColorLabel() or "none"
+	end)
 
 	if state.module == "develop" then
 		for _, param in ipairs(Config.BASIC_PARAMS) do
@@ -55,11 +77,18 @@ function Actions.getState()
 		end
 	end
 
-	local okBrowser, browser = pcall(function()
-		return Presets.getBrowserState()
-	end)
-	if okBrowser and type(browser) == "table" then
-		state.presetBrowser = browser
+	if not opts.light then
+		local okBrowser, browser = pcall(function()
+			return Presets.getBrowserState()
+		end)
+		if okBrowser and type(browser) == "table" then
+			-- Keep heartbeat payloads smaller: omit full folder index list
+			browser.folders = nil
+			state.presetBrowser = browser
+		end
+	elseif _G.SDLR and _G.SDLR.lastState and _G.SDLR.lastState.presetBrowser then
+		-- Preserve last browser snapshot on light updates
+		state.presetBrowser = _G.SDLR.lastState.presetBrowser
 	end
 
 	return state
@@ -314,18 +343,18 @@ function Actions.handle(msg)
 
 	if cmd == "copySettings" then
 		ensureDevelop()
-		safeCall(function()
+		local ok = safeCall(function()
 			LrDevelopController.copySettings()
 		end)
-		return true
+		return ok
 	end
 
 	if cmd == "pasteSettings" then
 		ensureDevelop()
-		safeCall(function()
+		local ok = safeCall(function()
 			LrDevelopController.pasteSettings()
 		end)
-		return true
+		return ok
 	end
 
 	if cmd == "listPresets" then
