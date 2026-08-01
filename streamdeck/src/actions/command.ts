@@ -90,14 +90,38 @@ export class CommandAction extends SingletonAction<CommandSettings> {
   }
 
   async paint(
-    action: { setTitle(title: string): Promise<void> },
+    action: {
+      setTitle(title: string): Promise<void>;
+      setImage?(path: string): Promise<void>;
+    },
     settings: CommandSettings,
   ): Promise<void> {
+    const command = settings.command ?? "undo";
+
+    if (action.setImage) {
+      const image =
+        command === "uprightLevel" ||
+        command === "uprightAuto" ||
+        command === "uprightVertical" ||
+        command === "uprightFull" ||
+        command === "uprightOff"
+          ? "imgs/actions/level"
+          : command === "autoTone"
+            ? "imgs/actions/auto"
+            : command === "selectTool" && (settings.tool ?? "crop") === "crop"
+              ? "imgs/actions/crop"
+              : command.startsWith("select") || command === "createMask"
+                ? "imgs/actions/mask"
+                : command === "undo" || command === "redo"
+                  ? "imgs/actions/undo"
+                  : "imgs/actions/command";
+      await action.setImage(image);
+    }
+
     if (settings.title) {
       await action.setTitle(settings.title);
       return;
     }
-    const command = settings.command ?? "undo";
     if (command === "showModule") {
       await action.setTitle(`Module\n${settings.module ?? "develop"}`);
       return;

@@ -1,6 +1,6 @@
 {
   "name": "com.cursor.lightroom",
-  "version": "1.2.3",
+  "version": "1.2.4",
   "description": "Two-way Adobe Lightroom Classic controls for Elgato Stream Deck",
   "type": "module",
   "scripts": {
