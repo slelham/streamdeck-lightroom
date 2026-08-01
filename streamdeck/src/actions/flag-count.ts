@@ -7,6 +7,7 @@ import {
 } from "@elgato/streamdeck";
 
 import { bridge } from "../bridge/client";
+import { PLUGIN_VERSION_SHORT } from "../version";
 
 type FlagCountSettings = {
   /** What to show on the key */
@@ -18,8 +19,7 @@ type FlagCountSettings = {
 @action({ UUID: "com.cursor.lightroom.flag-count" })
 export class FlagCountAction extends SingletonAction<FlagCountSettings> {
   override onWillAppear(ev: WillAppearEvent<FlagCountSettings>): void {
-    void bridge.sendSafe({ cmd: "getFlagCounts" });
-    void this.paint(ev.action, ev.payload.settings);
+    void this.refreshCounts().then(() => this.paint(ev.action, ev.payload.settings));
   }
 
   override async onDidReceiveSettings(
@@ -32,38 +32,56 @@ export class FlagCountAction extends SingletonAction<FlagCountSettings> {
     const onPress = ev.payload.settings.onPress ?? "filter-pick";
     let ok = true;
 
-    if (onPress === "refresh" || onPress === "none") {
-      ok = await bridge.sendSafe({ cmd: "getFlagCounts" });
-    } else if (onPress === "filter-pick") {
-      ok = await bridge.sendSafe({ cmd: "setPickFilter", pick: "flagged" });
-      await bridge.sendSafe({ cmd: "getFlagCounts" });
-    } else if (onPress === "filter-reject") {
-      ok = await bridge.sendSafe({ cmd: "setPickFilter", pick: "rejected" });
-      await bridge.sendSafe({ cmd: "getFlagCounts" });
-    } else if (onPress === "clear-filter") {
-      ok = await bridge.sendSafe({ cmd: "clearViewFilter" });
-      await bridge.sendSafe({ cmd: "getFlagCounts" });
+    if (!bridge.connected) {
+      await ev.action.showAlert();
+      await this.paint(ev.action, ev.payload.settings);
+      return;
     }
 
-    if (!ok) await ev.action.showAlert();
+    if (onPress === "filter-pick") {
+      const ack = await bridge.sendAndWait({ cmd: "setPickFilter", pick: "flagged" }, 4000);
+      ok = Boolean(ack?.ok);
+    } else if (onPress === "filter-reject") {
+      const ack = await bridge.sendAndWait({ cmd: "setPickFilter", pick: "rejected" }, 4000);
+      ok = Boolean(ack?.ok);
+    } else if (onPress === "clear-filter") {
+      const ack = await bridge.sendAndWait({ cmd: "clearViewFilter" }, 4000);
+      ok = Boolean(ack?.ok);
+    }
+
+    const countsOk = await this.refreshCounts();
+    if (!ok || !countsOk) await ev.action.showAlert();
     await this.paint(ev.action, ev.payload.settings);
+  }
+
+  private async refreshCounts(): Promise<boolean> {
+    if (!bridge.connected) return false;
+    const ack = await bridge.sendAndWait({ cmd: "getFlagCounts" }, 5000);
+    return Boolean(ack?.ok && bridge.state.flagCounts);
   }
 
   async paint(
     action: { setTitle(title: string): Promise<void> },
     settings: FlagCountSettings,
   ): Promise<void> {
+    if (!bridge.connected) {
+      await action.setTitle(`${PLUGIN_VERSION_SHORT}\nOffline`);
+      return;
+    }
+
     const counts = bridge.state.flagCounts;
-    const pick = counts?.pick ?? "…";
-    const reject = counts?.reject ?? "…";
+    const pick = counts?.pick;
+    const reject = counts?.reject;
+    const pickLabel = typeof pick === "number" && Number.isFinite(pick) ? String(pick) : "…";
+    const rejectLabel = typeof reject === "number" && Number.isFinite(reject) ? String(reject) : "…";
     const display = settings.display ?? "pick";
 
     if (display === "reject") {
-      await action.setTitle(`Rejects\n${reject}`);
+      await action.setTitle(`Rejects\n${rejectLabel}`);
     } else if (display === "both") {
-      await action.setTitle(`P ${pick}\nR ${reject}`);
+      await action.setTitle(`P ${pickLabel}\nR ${rejectLabel}`);
     } else {
-      await action.setTitle(`Flagged\n${pick}`);
+      await action.setTitle(`Flagged\n${pickLabel}`);
     }
   }
 }

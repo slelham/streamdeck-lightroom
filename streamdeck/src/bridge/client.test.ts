@@ -62,8 +62,9 @@ test("bridge connects, sends commands, and receives state", async () => {
   assert.match(gotCommand, /"cmd":"nudge"/);
   assert.match(gotCommand, /"param":"Exposure"/);
 
-  // Lightroom also gets an automatic getState on state-socket connect
+  // Lightroom also gets automatic getState / getFlagCounts on connect
   assert.match(gotCommand, /"cmd":"getState"/);
+  assert.match(gotCommand, /"cmd":"getFlagCounts"/);
 
   bridge.stop();
   stateSocket?.destroy();
