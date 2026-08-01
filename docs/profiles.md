@@ -1,6 +1,6 @@
 # Profile pack
 
-Bundled Stream Deck profiles install with the plugin (Stream Deck prompts on first install).
+Bundled Stream Deck profiles install with the plugin (Stream Deck prompts on first install). Layouts take cues from pro Lightroom workspace packs: separate **Library** (cull) and **Develop** pages, plus dedicated dials on Stream Deck +.
 
 | File | Device | DeviceType |
 |---|---|---|
@@ -8,23 +8,25 @@ Bundled Stream Deck profiles install with the plugin (Stream Deck prompts on fir
 | `profiles/lightroom-classic.streamDeckProfile` | Stream Deck / MK.2 (15 keys) | 0 |
 | `profiles/lightroom-classic-plus.streamDeckProfile` | Stream Deck + (keys + dials) | 7 |
 
+## Stream Deck +
+
+**Page 1 — Library**
+- Pick / Reject / Prev / Next
+- ★3 / ★5 / Auto Tone / Connection
+- Dials: Exposure · Temp · Highlights · Shadows (press dial to reset)
+
+**Page 2 — Develop**
+- Crop / Mask / AI Subject / AI Sky
+- Undo / Before-After / Preset folder / Reset All
+- Same four develop dials stay mapped
+
 ## XL layout
 
-**Page 1 — Cull & Develop**
-- Row 1: Pick / Reject / ★1–5 / Unflag
-- Row 2: Color labels / Prev / Next / Connection
-- Row 3: Exposure, Highlights, Shadows nudges / Auto Tone / Reset
-- Row 4: Crop, Mask, AI Subject/Sky, Copy/Paste, Undo/Redo
+See [`xl-layout.md`](xl-layout.md).
 
-**Page 2 — Presets & Tone**
-- Row 1: Folder/page browser controls + Temp nudges
-- Row 2: 8 live preset slots (press to apply)
-- Row 3: Contrast / Whites / Blacks / Clarity / Vibrance
-- Row 4: Module/view helpers + AI Background/People
-
-Rebuild after layout edits:
+Rebuild after layout or icon edits:
 
 ```bash
 cd streamdeck
-npm run profiles
+npm run build:all
 ```

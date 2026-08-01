@@ -1,34 +1,30 @@
-# Suggested Stream Deck XL layout (32 keys)
+# Stream Deck XL layout (32 keys)
 
-A practical first page for culling + basic develop. Drag actions from **Lightroom Classic** in the Stream Deck action list.
+Two workspaces, inspired by pro Lightroom profile packs.
 
-## Row 1 — Cull
+## Page 1 — Library
 
-| Pick (toggle) | Reject (toggle) | ★1 | ★2 | ★3 | ★4 | ★5 | Unflag |
+| Pick | Reject | ★1 | ★2 | ★3 | ★4 | ★5 | Unflag |
 |---|---|---|---|---|---|---|---|
-
-- Flag actions: set **Toggle pick** / **Toggle reject**, enable **Auto-advance** if you like.
-- Rating actions: mode **Set rating**, stars 1–5, optional auto-advance.
-
-## Row 2 — Labels + nav
-
 | Red | Yellow | Green | Blue | Purple | Prev | Next | Connection |
-|---|---|---|---|---|---|---|---|
-
-## Row 3 — Develop tone
-
 | Exp − | Exp + | Hi − | Hi + | Sh − | Sh + | Auto Tone | Reset All |
+| Crop | Mask | Subject | Sky | Copy | Paste | Undo | Redo |
+
+- Flag actions: **Toggle pick** / **Toggle reject** (auto-advance on).
+- Rating: **Set rating** 1–5.
+- Tone row uses **Develop Slider** (hold to repeat).
+
+## Page 2 — Develop
+
+| Folder − | Presets | Folder + | Page − | Page + | Temp − | Temp + | Connection |
 |---|---|---|---|---|---|---|---|
+| P1 | P2 | P3 | P4 | P5 | P6 | P7 | P8 |
+| Con − | Con + | Wh − | Wh + | Bk − | Bk + | Clarity | Vibrance |
+| Blue+Green | Flagged | P / R | Before | Zoom | 1:1 | Bg | People |
 
-Use **Develop Slider** actions; set parameter + direction. Hold a key to repeat.
+- Preset slots update live from Lightroom when the bridge is online.
+- Bottom row: label/flag filters, before/after, zoom, more AI masks.
 
-## Row 4 — Tools + finish
+## Icons
 
-| Crop | Masking | Select Subject | Select Sky | Copy | Paste | Undo | Redo |
-|---|---|---|---|---|---|---|---|
-
-Use **Lightroom Command** for these.
-
-## Folder idea
-
-Put a second page (folder) for Temperature/Tint/Clarity/Vibrance/Saturation and module/view switches so page 1 stays cull-focused.
+Action icons are dark rounded tiles with crisp glyphs (amber develop, green pick, red reject, gold ratings, purple presets/masks). Regenerate with `npm run icons`.
