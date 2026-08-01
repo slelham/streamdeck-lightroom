@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <title>Flag</title>
-    <script src="https://sdpi-toolkit.elgato.com/toolkit/v3/sdpi-components.js"></script>
+    <script src="sdpi-components.js"></script>
   </head>
   <body>
     <sdpi-item label="Action">
@@ -16,7 +16,7 @@
       </sdpi-select>
     </sdpi-item>
     <sdpi-item label="Auto-advance">
-      <sdpi-checkbox setting="autoAdvance" default="false">Go to next photo after flagging</sdpi-checkbox>
+      <sdpi-checkbox setting="autoAdvance" default="true" value-type="boolean">Go to next photo after pick/reject</sdpi-checkbox>
     </sdpi-item>
   </body>
 </html>
