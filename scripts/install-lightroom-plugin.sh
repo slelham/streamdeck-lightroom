@@ -22,11 +22,11 @@ mkdir -p "$(dirname "$DEST")"
 rm -rf "$DEST"
 cp -R "$SRC" "$DEST"
 
-echo "Installed Lightroom companion plugin to:"
+echo "Installed Lightroom companion plugin v1.4.5 to:"
 echo "  $DEST"
 echo
 echo "Next:"
 echo "  1. Quit and reopen Lightroom Classic (reload is not enough for sockets)"
 echo "  2. File → Plug-in Manager → enable “Stream Deck Lightroom”"
-echo "  3. File → Plug-in Extras → Stream Deck Bridge: Status"
+echo "  3. File → Plug-in Extras → Stream Deck Bridge: Status (should report 1.4.5)"
 echo "  4. Ports should be commands 59837 / state 59838"

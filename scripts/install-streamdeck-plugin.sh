@@ -27,10 +27,11 @@ rm -rf "$DEST"
 cp -R "$PLUGIN_DIR" "$DEST"
 
 echo
-echo "Installed Stream Deck plugin to:"
+echo "Installed Stream Deck plugin v1.4.5 to:"
 echo "  $DEST"
 echo
 echo "Next:"
-echo "  1. Restart the Stream Deck app"
-echo "  2. Accept the bundled Lightroom Classic profile when prompted"
-echo "  3. Install/enable the Lightroom companion: ./scripts/install-lightroom-plugin.sh"
+echo "  1. Fully quit Stream Deck (menu → Quit), then reopen"
+echo "  2. Connection key should show v1.4.5 Online/Offline"
+echo "  3. If it still says an older version, delete the Connection key and drag Connection on again"
+echo "  4. Install/enable the Lightroom companion: ./scripts/install-lightroom-plugin.sh"

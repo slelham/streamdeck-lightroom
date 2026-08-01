@@ -7,6 +7,7 @@ import streamDeck, {
 } from "@elgato/streamdeck";
 
 import { bridge } from "../bridge/client";
+import { PLUGIN_VERSION_SHORT } from "../version";
 
 @action({ UUID: "com.cursor.lightroom.connection" })
 export class ConnectionAction extends SingletonAction {
@@ -26,9 +27,14 @@ export class ConnectionAction extends SingletonAction {
     await this.onKeyDown(ev as unknown as KeyDownEvent);
   }
 
-  async refresh(action: { setTitle(title: string): Promise<void>; setState?(state: number): Promise<void> }): Promise<void> {
+  async refresh(action: {
+    setTitle(title: string): Promise<void>;
+    setState?(state: number): Promise<void>;
+  }): Promise<void> {
     const on = bridge.connected;
-    await action.setTitle(on ? "LR\nOnline" : "LR\nOffline");
+    await action.setTitle(
+      on ? `${PLUGIN_VERSION_SHORT}\nOnline` : `${PLUGIN_VERSION_SHORT}\nOffline`,
+    );
     if (action.setState) {
       await action.setState(on ? 0 : 1);
     }
@@ -43,5 +49,5 @@ export function wireConnectionUpdates(action: ConnectionAction): void {
   };
   bridge.on("connected", refreshAll);
   bridge.on("disconnected", refreshAll);
-  streamDeck.logger.info("Connection action wired to bridge events");
+  streamDeck.logger.info(`Connection action wired (${PLUGIN_VERSION_SHORT})`);
 }

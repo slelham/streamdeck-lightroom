@@ -10,7 +10,7 @@ return {
 	LrShutdownApp = "ShutdownPlugin.lua",
 	LrDisablePlugin = "DisablePlugin.lua",
 	LrEnablePlugin = "InitPlugin.lua",
-	VERSION = { major = 1, minor = 0, revision = 0, build = 1 },
+	VERSION = { major = 1, minor = 4, revision = 5, build = 1 },
 	LrExportMenuItems = {
 		{ title = "Stream Deck Bridge: Status", file = "Status.lua" },
 	},
