@@ -2,6 +2,7 @@
   Command handlers executed inside Lightroom Classic.
 ]]
 
+local LrApplication = import "LrApplication"
 local LrApplicationView = import "LrApplicationView"
 local LrDevelopController = import "LrDevelopController"
 local LrSelection = import "LrSelection"
@@ -40,6 +41,49 @@ local function ensureDevelop()
 			LrTasks.sleep(0.2)
 		end
 	end
+end
+
+local function activePhotoId()
+	local catalog = LrApplication.activeCatalog()
+	if not catalog then
+		return nil
+	end
+	local photo = catalog:getTargetPhoto()
+	if not photo then
+		return nil
+	end
+	return photo.localIdentifier
+end
+
+--- JSON / Property Inspector may send true, "true", or 1
+local function wantAdvance(v)
+	return v == true or v == 1 or v == "true" or v == "1"
+end
+
+--- Advance one photo after cull, without fighting Lightroom's Caps Lock /
+--- Photo > Auto Advance (which already moves the filmstrip after flag/rate/label).
+local function advanceAfterCull(beforeId)
+	-- Give native Auto Advance a moment to run if Caps Lock / menu option is on
+	LrTasks.sleep(0.16)
+	local currentId = activePhotoId()
+	if beforeId and currentId and currentId ~= beforeId then
+		-- Already advanced by Lightroom — calling nextPhoto would skip ahead
+		return true
+	end
+
+	-- Native auto-advance is off (or did not move us). Drive the filmstrip ourselves
+	-- in this same task; separate nextPhoto commands race and often no-op.
+	for _ = 1, 3 do
+		pcall(function()
+			LrSelection.nextPhoto()
+		end)
+		LrTasks.sleep(0.12)
+		currentId = activePhotoId()
+		if beforeId and currentId and currentId ~= beforeId then
+			return true
+		end
+	end
+	return false
 end
 
 function Actions.getState(opts)
@@ -130,22 +174,35 @@ function Actions.handle(msg)
 		local rating = tonumber(msg.rating) or 0
 		if rating < 0 then rating = 0 end
 		if rating > 5 then rating = 5 end
+		local beforeId = activePhotoId()
 		LrSelection.setRating(rating)
+		if wantAdvance(msg.advance) then
+			advanceAfterCull(beforeId)
+		end
 		return true
 	end
 
 	if cmd == "increaseRating" then
+		local beforeId = activePhotoId()
 		LrSelection.increaseRating()
+		if wantAdvance(msg.advance) then
+			advanceAfterCull(beforeId)
+		end
 		return true
 	end
 
 	if cmd == "decreaseRating" then
+		local beforeId = activePhotoId()
 		LrSelection.decreaseRating()
+		if wantAdvance(msg.advance) then
+			advanceAfterCull(beforeId)
+		end
 		return true
 	end
 
 	if cmd == "flag" then
 		local flag = msg.flag
+		local beforeId = activePhotoId()
 		if flag == "pick" then
 			LrSelection.flagAsPick()
 		elseif flag == "reject" then
@@ -154,12 +211,21 @@ function Actions.handle(msg)
 			LrSelection.removeFlag()
 		end
 		Library.invalidateCounts()
+		-- Advance in the same task. Caps Lock / Photo > Auto Advance is detected
+		-- so we do not double-step; without it, nextPhoto runs with retries.
+		if wantAdvance(msg.advance) and (flag == "pick" or flag == "reject") then
+			advanceAfterCull(beforeId)
+		end
 		return true
 	end
 
 	if cmd == "label" then
 		local label = msg.label or "none"
+		local beforeId = activePhotoId()
 		LrSelection.setColorLabel(label)
+		if wantAdvance(msg.advance) and label ~= "none" then
+			advanceAfterCull(beforeId)
+		end
 		return true
 	end
 

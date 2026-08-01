@@ -12,7 +12,7 @@ Live slider values, culling feedback, dials, AI masks, a **live Develop preset b
 |---|---|
 | Live Develop sliders | Exposure, Contrast, Highlights/Shadows, Whites/Blacks, Temp/Tint, Texture, Clarity, Dehaze, Vibrance, Saturation |
 | Dial support | Stream Deck+ : rotate to adjust, press to reset, live LCD value |
-| Culling | Ratings, pick/reject, color labels, optional auto-advance |
+| Culling | Ratings, pick/reject, color labels, auto-advance (works without Caps Lock; won’t double-step if Caps Lock / Photo → Auto Advance is already on) |
 | **Live preset browser** | Folder/page navigation + 8 live slots; apply any Develop preset |
 | **Apply Preset action** | Property Inspector dropdown filled live from Lightroom |
 | **Label filter** | One-tap Library filter for blue+green (or other label sets) |

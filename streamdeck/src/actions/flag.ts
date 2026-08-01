@@ -7,10 +7,11 @@ import {
 
 import { bridge } from "../bridge/client";
 import { formatFlag } from "../utils/format";
+import { asBool } from "../utils/settings";
 
 type FlagSettings = {
   flag?: "pick" | "reject" | "none" | "toggle-pick" | "toggle-reject";
-  autoAdvance?: boolean;
+  autoAdvance?: boolean | string;
 };
 
 @action({ UUID: "com.cursor.lightroom.flag" })
@@ -23,6 +24,9 @@ export class FlagAction extends SingletonAction<FlagSettings> {
     const settings = ev.payload.settings;
     const mode = settings.flag ?? "pick";
     const current = bridge.state.flag ?? 0;
+    // Default ON for culling (profile keys + newly dragged keys)
+    const advance =
+      settings.autoAdvance === undefined ? true : asBool(settings.autoAdvance);
 
     let flag: "pick" | "reject" | "none" = "pick";
     if (mode === "toggle-pick") {
@@ -33,10 +37,14 @@ export class FlagAction extends SingletonAction<FlagSettings> {
       flag = mode;
     }
 
-    const ok = await bridge.sendSafe({ cmd: "flag", flag });
-    if (ok && settings.autoAdvance && (flag === "pick" || flag === "reject")) {
-      await bridge.sendSafe({ cmd: "nextPhoto" });
-    }
+    // Single LR command: flag + optional advance (avoids async race with nextPhoto).
+    // Lightroom also respects Caps Lock / Photo > Auto Advance; the plugin detects
+    // that and will not double-advance.
+    const ok = await bridge.sendSafe({
+      cmd: "flag",
+      flag,
+      advance: advance && (flag === "pick" || flag === "reject"),
+    });
     if (!ok) await ev.action.showAlert();
     await this.paint(ev.action, settings);
   }
