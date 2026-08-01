@@ -5,6 +5,7 @@ import {
   type WillAppearEvent,
 } from "@elgato/streamdeck";
 
+import { sendCullThenAdvance } from "../utils/advance";
 import { bridge } from "../bridge/client";
 import { asBool } from "../utils/settings";
 
@@ -25,7 +26,7 @@ export class LabelAction extends SingletonAction<LabelSettings> {
     const current = (bridge.state.label || "none").toLowerCase();
     const next = current === label ? "none" : label;
     const advance = asBool(settings.autoAdvance) && next !== "none";
-    const ok = await bridge.sendSafe({ cmd: "label", label: next, advance });
+    const ok = await sendCullThenAdvance({ cmd: "label", label: next }, advance);
     if (!ok) await ev.action.showAlert();
     await this.paint(ev.action, settings);
   }

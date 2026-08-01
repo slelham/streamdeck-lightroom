@@ -7,6 +7,7 @@ import {
 } from "@elgato/streamdeck";
 
 import { bridge } from "../bridge/client";
+import { sendCullThenAdvance } from "../utils/advance";
 import { formatRating } from "../utils/format";
 import { asBool } from "../utils/settings";
 
@@ -29,19 +30,18 @@ export class RatingAction extends SingletonAction<RatingSettings> {
     let ok = false;
 
     if (mode === "increase") {
-      ok = await bridge.sendSafe({ cmd: "increaseRating", advance });
+      ok = await sendCullThenAdvance({ cmd: "increaseRating" }, advance);
     } else if (mode === "decrease") {
-      ok = await bridge.sendSafe({ cmd: "decreaseRating", advance });
+      ok = await sendCullThenAdvance({ cmd: "decreaseRating" }, advance);
     } else if (mode === "cycle") {
       const current = bridge.state.rating ?? 0;
       const next = current >= 5 ? 0 : current + 1;
-      ok = await bridge.sendSafe({ cmd: "setRating", rating: next, advance });
+      ok = await sendCullThenAdvance({ cmd: "setRating", rating: next }, advance);
     } else {
-      ok = await bridge.sendSafe({
-        cmd: "setRating",
-        rating: Number(settings.rating ?? 0),
+      ok = await sendCullThenAdvance(
+        { cmd: "setRating", rating: Number(settings.rating ?? 0) },
         advance,
-      });
+      );
     }
 
     if (!ok) await ev.action.showAlert();

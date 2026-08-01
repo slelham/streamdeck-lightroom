@@ -6,6 +6,7 @@ import {
 } from "@elgato/streamdeck";
 
 import { bridge } from "../bridge/client";
+import { sendCullThenAdvance } from "../utils/advance";
 import { formatFlag } from "../utils/format";
 import { asBool } from "../utils/settings";
 
@@ -37,14 +38,11 @@ export class FlagAction extends SingletonAction<FlagSettings> {
       flag = mode;
     }
 
-    // Single LR command: flag + optional advance (avoids async race with nextPhoto).
-    // Lightroom also respects Caps Lock / Photo > Auto Advance; the plugin detects
-    // that and will not double-advance.
-    const ok = await bridge.sendSafe({
-      cmd: "flag",
-      flag,
-      advance: advance && (flag === "pick" || flag === "reject"),
-    });
+    // Same sequence as a Stream Deck multi-action: Pick, pause, Next.
+    const ok = await sendCullThenAdvance(
+      { cmd: "flag", flag },
+      advance && (flag === "pick" || flag === "reject"),
+    );
     if (!ok) await ev.action.showAlert();
     await this.paint(ev.action, settings);
   }

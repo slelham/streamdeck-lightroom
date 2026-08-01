@@ -1,6 +1,6 @@
 {
   "name": "com.cursor.lightroom",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "description": "Two-way Adobe Lightroom Classic controls for Elgato Stream Deck",
   "type": "module",
   "scripts": {
@@ -13,7 +13,7 @@
     "validate": "streamdeck validate com.cursor.lightroom.sdPlugin",
     "validate:profiles": "node ../scripts/validate-profiles.mjs",
     "pack": "npm run build:all && streamdeck pack com.cursor.lightroom.sdPlugin -f -o dist",
-    "test": "tsx --test src/bridge/*.test.ts src/utils/*.test.ts",
+    "test": "tsx --test src/bridge/*.test.ts src/utils/*.test.ts src/utils/advance.test.ts",
     "check": "npm run build && npm test && npm run profiles && npm run validate:profiles"
   },
   "dependencies": {
