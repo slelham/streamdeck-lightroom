@@ -2,6 +2,7 @@
   Command handlers executed inside Lightroom Classic.
 ]]
 
+local LrApplication = import "LrApplication"
 local LrApplicationView = import "LrApplicationView"
 local LrDevelopController = import "LrDevelopController"
 local LrSelection = import "LrSelection"
@@ -42,6 +43,18 @@ local function ensureDevelop()
 	end
 end
 
+local function activePhotoId()
+	local catalog = LrApplication.activeCatalog()
+	if not catalog then
+		return nil
+	end
+	local photo = catalog:getTargetPhoto()
+	if not photo then
+		return nil
+	end
+	return photo.localIdentifier
+end
+
 function Actions.getState(opts)
 	opts = opts or {}
 	local state = {
@@ -49,6 +62,7 @@ function Actions.getState(opts)
 		rating = 0,
 		flag = 0,
 		label = "none",
+		photoId = nil,
 		params = {},
 	}
 
@@ -64,6 +78,7 @@ function Actions.getState(opts)
 	pcall(function()
 		state.label = LrSelection.getColorLabel() or "none"
 	end)
+	state.photoId = activePhotoId()
 
 	if state.module == "develop" then
 		for _, param in ipairs(Config.BASIC_PARAMS) do
@@ -164,6 +179,14 @@ function Actions.handle(msg)
 	end
 
 	if cmd == "nextPhoto" then
+		-- Optional fromPhotoId: skip if Caps Lock / Photo > Auto Advance already moved
+		local fromId = msg.fromPhotoId
+		if fromId ~= nil then
+			local currentId = activePhotoId()
+			if currentId ~= nil and tostring(currentId) ~= tostring(fromId) then
+				return true
+			end
+		end
 		LrSelection.nextPhoto()
 		return true
 	end
