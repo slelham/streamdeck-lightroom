@@ -19,6 +19,30 @@ export function formatParamValue(param: string, value: number | undefined): stri
     case "Dehaze":
     case "Vibrance":
     case "Saturation":
+    case "ParametricDarks":
+    case "ParametricLights":
+    case "ParametricShadows":
+    case "ParametricHighlights":
+    case "ParametricShadowSplit":
+    case "ParametricMidtoneSplit":
+    case "ParametricHighlightSplit":
+    case "SplitToningShadowHue":
+    case "SplitToningShadowSaturation":
+    case "ColorGradeShadowLum":
+    case "SplitToningHighlightHue":
+    case "SplitToningHighlightSaturation":
+    case "ColorGradeHighlightLum":
+    case "ColorGradeMidtoneHue":
+    case "ColorGradeMidtoneSat":
+    case "ColorGradeMidtoneLum":
+    case "ColorGradeGlobalHue":
+    case "ColorGradeGlobalSat":
+    case "ColorGradeGlobalLum":
+    case "SplitToningBalance":
+    case "ColorGradeBlending":
+    case "Sharpness":
+    case "LuminanceSmoothing":
+    case "ColorNoiseReduction":
       return `${Math.round(value)}`;
     default:
       return Number.isInteger(value) ? String(value) : value.toFixed(2);
@@ -51,6 +75,30 @@ export function shortParamName(param: string): string {
     Dehaze: "Deh",
     Vibrance: "Vib",
     Saturation: "Sat",
+    ParametricDarks: "PDark",
+    ParametricLights: "PLite",
+    ParametricShadows: "PSh",
+    ParametricHighlights: "PHi",
+    ParametricShadowSplit: "ShSp",
+    ParametricMidtoneSplit: "MidSp",
+    ParametricHighlightSplit: "HiSp",
+    SplitToningShadowHue: "ShHue",
+    SplitToningShadowSaturation: "ShSat",
+    ColorGradeShadowLum: "ShLum",
+    SplitToningHighlightHue: "HiHue",
+    SplitToningHighlightSaturation: "HiSat",
+    ColorGradeHighlightLum: "HiLum",
+    ColorGradeMidtoneHue: "MtHue",
+    ColorGradeMidtoneSat: "MtSat",
+    ColorGradeMidtoneLum: "MtLum",
+    ColorGradeGlobalHue: "GlHue",
+    ColorGradeGlobalSat: "GlSat",
+    ColorGradeGlobalLum: "GlLum",
+    SplitToningBalance: "Bal",
+    ColorGradeBlending: "Blend",
+    Sharpness: "Sharp",
+    LuminanceSmoothing: "NR-L",
+    ColorNoiseReduction: "NR-C",
   };
   return map[param] ?? param.slice(0, 4);
 }
@@ -69,4 +117,28 @@ export const DEFAULT_STEPS: Record<string, number> = {
   Dehaze: 5,
   Vibrance: 5,
   Saturation: 5,
+  ParametricDarks: 5,
+  ParametricLights: 5,
+  ParametricShadows: 5,
+  ParametricHighlights: 5,
+  ParametricShadowSplit: 5,
+  ParametricMidtoneSplit: 5,
+  ParametricHighlightSplit: 5,
+  SplitToningShadowHue: 5,
+  SplitToningShadowSaturation: 5,
+  ColorGradeShadowLum: 5,
+  SplitToningHighlightHue: 5,
+  SplitToningHighlightSaturation: 5,
+  ColorGradeHighlightLum: 5,
+  ColorGradeMidtoneHue: 5,
+  ColorGradeMidtoneSat: 5,
+  ColorGradeMidtoneLum: 5,
+  ColorGradeGlobalHue: 5,
+  ColorGradeGlobalSat: 5,
+  ColorGradeGlobalLum: 5,
+  SplitToningBalance: 5,
+  ColorGradeBlending: 5,
+  Sharpness: 5,
+  LuminanceSmoothing: 5,
+  ColorNoiseReduction: 5,
 };

@@ -1,13 +1,15 @@
 {
   "name": "com.cursor.lightroom",
-  "version": "1.2.0",
+  "version": "1.4.3",
   "description": "Two-way Adobe Lightroom Classic controls for Elgato Stream Deck",
   "type": "module",
   "scripts": {
     "build": "rollup -c",
     "profiles": "node ../scripts/build-profiles.mjs",
-    "icons": "node ../scripts/generate-icons.mjs",
-    "build:all": "npm run icons && npm run build && npm run profiles",
+    "icons": "python3 ../scripts/process-ai-icons.py",
+    "icons:legacy": "node ../scripts/generate-icons.mjs",
+    "build:all": "npm run build && npm run profiles",
+    "build:release": "npm run icons && npm run build && npm run profiles",
     "watch": "rollup -c -w --watch.onEnd=\"streamdeck restart com.cursor.lightroom\"",
     "link": "streamdeck link com.cursor.lightroom.sdPlugin",
     "validate": "streamdeck validate com.cursor.lightroom.sdPlugin",

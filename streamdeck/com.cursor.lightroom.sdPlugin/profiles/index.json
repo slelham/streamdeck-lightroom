@@ -10,8 +10,23 @@
     "name": "Lightroom Classic"
   },
   {
+    "fileName": "lightroom-classic-mini",
+    "deviceType": 1,
+    "name": "Lightroom Classic Mini"
+  },
+  {
+    "fileName": "lightroom-classic-neo",
+    "deviceType": 9,
+    "name": "Lightroom Classic Neo"
+  },
+  {
     "fileName": "lightroom-classic-plus",
     "deviceType": 7,
     "name": "Lightroom Classic Plus"
+  },
+  {
+    "fileName": "lightroom-classic-plus-xl",
+    "deviceType": 13,
+    "name": "Lightroom Classic + XL"
   }
 ]

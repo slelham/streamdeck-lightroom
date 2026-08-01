@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <title>Flag Count</title>
-    <script src="https://sdpi-toolkit.elgato.com/toolkit/v3/sdpi-components.js"></script>
+    <script src="sdpi-components.js"></script>
   </head>
   <body>
     <sdpi-item label="Display">
@@ -23,7 +23,9 @@
       </sdpi-select>
     </sdpi-item>
     <p style="padding: 0 12px 12px; opacity: 0.75; font-size: 12px">
-      Counts come from the Lightroom catalog (cached a few seconds). Press refreshes and can jump the Library filter to flagged photos.
+      Counts are for the <b>folder or collection selected in Lightroom’s Library</b> (including subfolders),
+      not the entire catalog — unless that is your current source. Press Connection or this key to refresh
+      after changing folders.
     </p>
   </body>
 </html>

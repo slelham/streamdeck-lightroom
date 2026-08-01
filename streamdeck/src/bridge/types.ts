@@ -35,6 +35,12 @@ export interface FlagCounts {
   reject?: number;
   totalFlagged?: number;
   cached?: boolean;
+  /** folder | collection | catalog | activeSource */
+  scope?: string;
+  sourceName?: string;
+  photoCount?: number;
+  method?: string;
+  error?: string;
 }
 
 export interface ViewFilterSummary {
@@ -88,6 +94,30 @@ export const BASIC_PARAMS = [
   "Dehaze",
   "Vibrance",
   "Saturation",
+  "ParametricDarks",
+  "ParametricLights",
+  "ParametricShadows",
+  "ParametricHighlights",
+  "ParametricShadowSplit",
+  "ParametricMidtoneSplit",
+  "ParametricHighlightSplit",
+  "SplitToningShadowHue",
+  "SplitToningShadowSaturation",
+  "ColorGradeShadowLum",
+  "SplitToningHighlightHue",
+  "SplitToningHighlightSaturation",
+  "ColorGradeHighlightLum",
+  "ColorGradeMidtoneHue",
+  "ColorGradeMidtoneSat",
+  "ColorGradeMidtoneLum",
+  "ColorGradeGlobalHue",
+  "ColorGradeGlobalSat",
+  "ColorGradeGlobalLum",
+  "SplitToningBalance",
+  "ColorGradeBlending",
+  "Sharpness",
+  "LuminanceSmoothing",
+  "ColorNoiseReduction",
 ] as const;
 
 export type BasicParam = (typeof BASIC_PARAMS)[number];

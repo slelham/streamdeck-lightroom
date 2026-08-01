@@ -2,6 +2,7 @@ import streamDeck from "@elgato/streamdeck";
 
 import { CommandAction } from "./actions/command";
 import { ConnectionAction, wireConnectionUpdates } from "./actions/connection";
+import { CullDialAction } from "./actions/cull-dial";
 import { FlagAction } from "./actions/flag";
 import { FlagCountAction } from "./actions/flag-count";
 import { LabelAction } from "./actions/label";
@@ -22,6 +23,7 @@ const labelAction = new LabelAction();
 const navigateAction = new NavigateAction();
 const sliderAction = new SliderAction();
 const sliderDialAction = new SliderDialAction();
+const cullDialAction = new CullDialAction();
 const commandAction = new CommandAction();
 const presetNavAction = new PresetNavAction();
 const presetSlotAction = new PresetSlotAction();
@@ -36,6 +38,7 @@ streamDeck.actions.registerAction(labelAction);
 streamDeck.actions.registerAction(navigateAction);
 streamDeck.actions.registerAction(sliderAction);
 streamDeck.actions.registerAction(sliderDialAction);
+streamDeck.actions.registerAction(cullDialAction);
 streamDeck.actions.registerAction(commandAction);
 streamDeck.actions.registerAction(presetNavAction);
 streamDeck.actions.registerAction(presetSlotAction);
@@ -63,6 +66,9 @@ bridge.on("state", () => {
   }
   for (const a of sliderDialAction.actions) {
     void a.getSettings().then((settings) => sliderDialAction.paint(a, settings));
+  }
+  for (const a of cullDialAction.actions) {
+    void a.getSettings().then((settings) => cullDialAction.paint(a, settings));
   }
   for (const a of presetNavAction.actions) {
     void a.getSettings().then((settings) => presetNavAction.paint(a, settings));
