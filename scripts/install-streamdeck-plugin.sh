@@ -33,7 +33,10 @@ echo
 echo "Installed Stream Deck plugin v${VERSION} (manifest ${MANIFEST_VER}) to:"
 echo "  $DEST"
 echo
-echo "Confirm update: Connection key should read “v1.3 Online” (not just LR Online)."
+echo "Confirm update:"
+echo "  • Connection key ICON shows white “v1.3.1” at the bottom"
+echo "  • Connection title reads “v1.3.1 Online”"
+echo "  • Or run: ./scripts/verify-install.sh"
 echo
 echo "Next:"
 echo "  1. Fully quit Stream Deck (menu bar / tray) and reopen"

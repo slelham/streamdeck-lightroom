@@ -34,7 +34,7 @@ export class ConnectionAction extends SingletonAction {
     setState?(state: number): Promise<void>;
   }): Promise<void> {
     const on = bridge.connected;
-    // Version on every Connection key — easiest way to confirm the install stuck
+    // Version on every Connection key (also baked into the connection icon as "v1.3.1")
     await action.setTitle(on ? `${PLUGIN_VERSION_SHORT}\nOnline` : `${PLUGIN_VERSION_SHORT}\nOffline`);
     if (action.setState) {
       await action.setState(on ? 0 : 1);

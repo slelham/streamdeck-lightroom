@@ -397,23 +397,83 @@ function drawSun(x, y, s) {
   return d;
 }
 
-function makeIcon(tint, ink, sdfFn, multi) {
+/** Tiny 3×5 bitmap font for version stamp on Connection icons */
+const FONT3X5 = {
+  "0": ["111", "101", "101", "101", "111"],
+  "1": ["010", "110", "010", "010", "111"],
+  "2": ["111", "001", "111", "100", "111"],
+  "3": ["111", "001", "111", "001", "111"],
+  "4": ["101", "101", "111", "001", "001"],
+  "5": ["111", "100", "111", "001", "111"],
+  "6": ["111", "100", "111", "101", "111"],
+  "7": ["111", "001", "010", "010", "010"],
+  "8": ["111", "101", "111", "101", "111"],
+  "9": ["111", "101", "111", "001", "111"],
+  ".": ["000", "000", "000", "000", "010"],
+  v: ["000", "101", "101", "101", "011"],
+  " ": ["000", "000", "000", "000", "000"],
+};
+
+function textSdf(x, y, text, ox, oy, scale) {
+  // scale = pixel size of each font cell
+  let d = Infinity;
+  let cursor = 0;
+  for (const ch of text) {
+    const glyph = FONT3X5[ch] || FONT3X5[" "];
+    for (let row = 0; row < 5; row++) {
+      for (let col = 0; col < 3; col++) {
+        if (glyph[row][col] !== "1") continue;
+        const cx = ox + (cursor * 4 + col + 0.5) * scale;
+        const cy = oy + (row + 0.5) * scale;
+        d = Math.min(d, sdfBox(x, y, cx, cy, scale * 0.55, scale * 0.55));
+      }
+    }
+    cursor += 1;
+  }
+  return d;
+}
+
+function makeIcon(tint, ink, sdfFn, multi, badgeText) {
   return (x, y, s) => {
     let px = backdrop(x, y, s, tint);
     if (px[3] === 0) return px;
 
+    // Shift glyph up when a version badge occupies the lower third
+    const gy = badgeText ? y + s * 0.16 : y;
+
     if (multi) {
-      const parts = multi(x, y, s);
+      const parts = multi(x, gy, s);
       for (const { sdf, color } of parts) {
         px = glow(px, sdf, color, s * 0.12);
         px = layer(px, cover(sdf), color);
       }
-      return px;
+    } else {
+      const sdf = sdfFn(x, gy, s);
+      px = glow(px, sdf, ink, s * 0.14);
+      px = layer(px, cover(sdf), ink);
     }
 
-    const sdf = sdfFn(x, y, s);
-    px = glow(px, sdf, ink, s * 0.14);
-    px = layer(px, cover(sdf), ink);
+    if (badgeText) {
+      // Fit version stamp inside the tile (3×5 font, 4 cells per char incl. gap)
+      const maxW = s * 0.78;
+      const scale = Math.max(3, Math.floor(maxW / (badgeText.length * 4)));
+      const textW = badgeText.length * 4 * scale - scale; // last gap unused
+      const textH = 5 * scale;
+      const ox = (s - textW) / 2;
+      const oy = s * 0.68;
+      const plate = sdfRoundBox(
+        x,
+        y,
+        s / 2,
+        oy + textH / 2,
+        textW / 2 + scale * 0.7,
+        textH / 2 + scale * 0.5,
+        scale * 0.4,
+      );
+      px = layer(px, cover(plate, 1.0), [0, 0, 0, 255], 0.75);
+      const td = textSdf(x, y, badgeText, ox, oy, scale);
+      px = layer(px, cover(td, 0.7), [255, 255, 255, 255], 1);
+    }
     return px;
   };
 }
@@ -428,12 +488,15 @@ const SLATE = [210, 218, 230, 255];
 const ROSE = [255, 120, 140, 255];
 const CYAN = [80, 220, 230, 255];
 
+// Keep in sync with streamdeck/src/version.ts + package.json
+const VERSION_BADGE = "v1.3.1";
+
 const icons = {
-  "plugin.png": makeIcon(AMBER, AMBER, drawSun),
-  "category.png": makeIcon(AMBER, AMBER, drawSun),
-  "actions/connection.png": makeIcon([40, 90, 60, 255], GREEN, drawLink),
-  "actions/connection-on.png": makeIcon([40, 90, 60, 255], GREEN, drawLink),
-  "actions/connection-off.png": makeIcon([90, 40, 40, 255], RED, drawLinkOff),
+  "plugin.png": makeIcon(AMBER, AMBER, drawSun, null, VERSION_BADGE),
+  "category.png": makeIcon(AMBER, AMBER, drawSun, null, VERSION_BADGE),
+  "actions/connection.png": makeIcon([40, 90, 60, 255], GREEN, drawLink, null, VERSION_BADGE),
+  "actions/connection-on.png": makeIcon([40, 90, 60, 255], GREEN, drawLink, null, VERSION_BADGE),
+  "actions/connection-off.png": makeIcon([90, 40, 40, 255], RED, drawLinkOff, null, VERSION_BADGE),
   "actions/rating.png": makeIcon([90, 70, 20, 255], GOLD, drawStar),
   "actions/flag.png": makeIcon([30, 80, 50, 255], GREEN, drawFlag),
   "actions/reject.png": makeIcon([90, 35, 35, 255], RED, drawReject),
