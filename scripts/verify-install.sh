@@ -2,7 +2,7 @@
 # Print installed Stream Deck + Lightroom plugin versions on this machine.
 set -euo pipefail
 
-EXPECTED="1.3.1"
+EXPECTED="1.3.2"
 
 if [[ "$(uname -s)" == "Darwin" ]]; then
   SD="$HOME/Library/Application Support/com.elgato.StreamDeck/Plugins/com.cursor.lightroom.sdPlugin"

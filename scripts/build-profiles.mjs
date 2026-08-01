@@ -149,7 +149,7 @@ function cmd(command, title, extra = {}, imageKey = "command") {
 }
 function connection() {
   // Title matches runtime setTitle so the Stream Deck app also shows the version
-  return action("com.cursor.lightroom.connection", "Connection", {}, "v1.3.1", "connection");
+  return action("com.cursor.lightroom.connection", "Connection", {}, "v1.3.2", "connection");
 }
 function presetNav(navAction, title) {
   return action("com.cursor.lightroom.preset-nav", "Preset Browser Nav", { action: navAction }, title, "preset");

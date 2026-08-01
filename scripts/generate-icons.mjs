@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * Distinct Stream Deck action icons — unique glyphs per action, not a shared
- * generic tile chrome. Soft AA, category colors, large readable symbols.
+ * Clean Stream Deck icons — crisp filled glyphs, no glow/blur.
+ * Rendered at 256px then box-filtered down for sharp 72/@2x assets.
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -10,8 +10,9 @@ import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const outDir = path.join(__dirname, "../streamdeck/com.cursor.lightroom.sdPlugin/imgs");
-const HI = 144;
+const HI = 256;
 const LO = 72;
+const MID = 144;
 
 function crc32(buf) {
   let c = ~0;
@@ -63,31 +64,32 @@ function sdfRoundBox(x, y, cx, cy, hw, hh, r) {
   return sdfBox(x, y, cx, cy, hw - r, hh - r) - r;
 }
 
-function sdfLine(x, y, x1, y1, x2, y2, thick) {
+function sdfLine(x, y, x1, y1, x2, y2) {
   const dx = x2 - x1;
   const dy = y2 - y1;
   const len2 = dx * dx + dy * dy || 1;
   let t = ((x - x1) * dx + (y - y1) * dy) / len2;
   t = clamp(t, 0, 1);
-  return dist(x, y, x1 + t * dx, y1 + t * dy) - thick;
+  return dist(x, y, x1 + t * dx, y1 + t * dy);
 }
 
 function sdfCapsule(x, y, x1, y1, x2, y2, r) {
-  return sdfLine(x, y, x1, y1, x2, y2, 0) - r;
+  return sdfLine(x, y, x1, y1, x2, y2) - r;
 }
 
 function opUnion(a, b) {
   return Math.min(a, b);
 }
-
 function opSub(a, b) {
   return Math.max(a, -b);
 }
 
-function cover(sdf, feather = 1.35) {
+/** Smooth AA at hi-res (downscale cleans further). No outer glow. */
+function cover(sdf, feather = 1.05) {
   if (sdf <= -feather) return 1;
   if (sdf >= feather) return 0;
-  return 1 - (sdf + feather) / (2 * feather);
+  const t = 1 - (sdf + feather) / (2 * feather);
+  return t * t * (3 - 2 * t);
 }
 
 function fillPoly(x, y, pts) {
@@ -109,13 +111,12 @@ function starSdf(x, y, cx, cy, rOuter, rInner, points = 5) {
     const r = i % 2 === 0 ? rOuter : rInner;
     pts.push([cx + Math.cos(ang) * r, cy + Math.sin(ang) * r]);
   }
-  // Approximate SDF: negative inside, distance outside via edge samples
   const inside = fillPoly(x, y, pts) < 0;
   let d = Infinity;
   for (let i = 0; i < pts.length; i++) {
     const a = pts[i];
     const b = pts[(i + 1) % pts.length];
-    d = Math.min(d, Math.abs(sdfLine(x, y, a[0], a[1], b[0], b[1], 0)));
+    d = Math.min(d, sdfLine(x, y, a[0], a[1], b[0], b[1]));
   }
   return inside ? -d : d;
 }
@@ -192,204 +193,174 @@ function boxDownscale(src, srcSize, dstSize) {
   return out;
 }
 
-/** Icon canvas: deep black, subtle vignette, NO shared footer chrome */
-function backdrop(x, y, s, tint) {
-  const m = s * 0.06;
-  const rr = s * 0.22;
+function backdrop(x, y, s) {
+  const m = s * 0.08;
+  const rr = s * 0.2;
   const sdf = sdfRoundBox(x, y, s / 2, s / 2, s / 2 - m, s / 2 - m, rr);
-  const a = cover(sdf, 1.2);
+  const a = cover(sdf, 0.7);
   if (a <= 0) return [0, 0, 0, 0];
-  const nx = (x / s - 0.5) * 2;
-  const ny = (y / s - 0.5) * 2;
-  const vignette = clamp(1 - (nx * nx + ny * ny) * 0.22, 0.75, 1);
-  const base = mix([18, 19, 22, 255], tint, 0.14);
-  const top = mix(base, [38, 40, 48, 255], clamp(1 - y / (s * 0.55), 0, 1) * 0.35);
-  const c = mix(top, [8, 8, 10, 255], 1 - vignette);
-  c[3] = Math.round(255 * a);
-  return c;
+  // Flat near-black — no vignette banding
+  return [16, 16, 18, Math.round(255 * a)];
 }
 
-function layer(dst, cov, color, strength = 1) {
-  if (cov <= 0) return dst;
-  return mix(dst, [...color.slice(0, 3), 255], clamp(cov * strength, 0, 1) * ((color[3] ?? 255) / 255));
+function layer(dst, cov, color) {
+  if (cov <= 0.001) return dst;
+  return mix(dst, [...color.slice(0, 3), 255], cov * ((color[3] ?? 255) / 255));
 }
 
-function glow(dst, sdf, color, radius = 10) {
-  if (sdf >= radius) return dst;
-  const g = clamp(1 - sdf / radius, 0, 1);
-  return mix(dst, [...color.slice(0, 3), 255], g * g * 0.28);
-}
-
-// —— Unique glyphs ——
+// Glyphs — solid, simple, readable at 72px
 function drawFlag(x, y, s) {
-  const cx = s * 0.42;
-  const top = s * 0.26;
-  const bot = s * 0.78;
-  let d = sdfCapsule(x, y, cx, top, cx, bot, s * 0.028);
-  const flag = fillPoly(x, y, [
-    [cx + s * 0.02, top + s * 0.02],
-    [cx + s * 0.36, top + s * 0.12],
-    [cx + s * 0.02, top + s * 0.28],
-  ]);
-  d = opUnion(d, flag);
+  const cx = s * 0.4;
+  const top = s * 0.28;
+  const bot = s * 0.72;
+  let d = sdfCapsule(x, y, cx, top, cx, bot, s * 0.032);
+  d = opUnion(
+    d,
+    fillPoly(x, y, [
+      [cx + s * 0.02, top + s * 0.02],
+      [cx + s * 0.34, top + s * 0.14],
+      [cx + s * 0.02, top + s * 0.3],
+    ]),
+  );
   return d;
 }
 
 function drawReject(x, y, s) {
   const cx = s / 2;
   const cy = s / 2;
-  const r = s * 0.26;
-  let d = Math.abs(sdfCircle(x, y, cx, cy, r)) - s * 0.045;
-  d = opUnion(d, sdfCapsule(x, y, cx - r * 0.55, cy + r * 0.55, cx + r * 0.55, cy - r * 0.55, s * 0.04));
+  const r = s * 0.24;
+  let d = Math.abs(sdfCircle(x, y, cx, cy, r)) - s * 0.048;
+  d = opUnion(d, sdfCapsule(x, y, cx - r * 0.52, cy + r * 0.52, cx + r * 0.52, cy - r * 0.52, s * 0.042));
   return d;
 }
 
 function drawStar(x, y, s) {
-  return starSdf(x, y, s / 2, s / 2 + s * 0.02, s * 0.3, s * 0.13, 5);
+  return starSdf(x, y, s / 2, s / 2, s * 0.28, s * 0.12, 5);
 }
 
 function drawChevron(x, y, s, dir) {
   const cx = s / 2;
   const cy = s / 2;
-  const a = s * 0.16;
+  const a = s * 0.14;
   if (dir < 0) {
     return opUnion(
-      sdfCapsule(x, y, cx + a, cy - a * 1.35, cx - a * 0.85, cy, s * 0.042),
-      sdfCapsule(x, y, cx - a * 0.85, cy, cx + a, cy + a * 1.35, s * 0.042),
+      sdfCapsule(x, y, cx + a, cy - a * 1.25, cx - a * 0.75, cy, s * 0.048),
+      sdfCapsule(x, y, cx - a * 0.75, cy, cx + a, cy + a * 1.25, s * 0.048),
     );
   }
   return opUnion(
-    sdfCapsule(x, y, cx - a, cy - a * 1.35, cx + a * 0.85, cy, s * 0.042),
-    sdfCapsule(x, y, cx + a * 0.85, cy, cx - a, cy + a * 1.35, s * 0.042),
+    sdfCapsule(x, y, cx - a, cy - a * 1.25, cx + a * 0.75, cy, s * 0.048),
+    sdfCapsule(x, y, cx + a * 0.75, cy, cx - a, cy + a * 1.25, s * 0.048),
   );
 }
 
 function drawSlider(x, y, s) {
-  const cy = s * 0.52;
-  let d = sdfCapsule(x, y, s * 0.2, cy, s * 0.8, cy, s * 0.035);
-  d = opUnion(d, sdfCircle(x, y, s * 0.62, cy, s * 0.11));
-  d = opUnion(d, sdfCircle(x, y, s * 0.2, cy, s * 0.045));
-  d = opUnion(d, sdfCircle(x, y, s * 0.8, cy, s * 0.045));
+  const cy = s * 0.5;
+  let d = sdfCapsule(x, y, s * 0.22, cy, s * 0.78, cy, s * 0.038);
+  d = opUnion(d, sdfCircle(x, y, s * 0.6, cy, s * 0.1));
   return d;
 }
 
 function drawDial(x, y, s) {
   const cx = s / 2;
-  const cy = s / 2 + s * 0.02;
-  const r = s * 0.26;
+  const cy = s / 2;
+  const r = s * 0.24;
   let d = Math.abs(sdfCircle(x, y, cx, cy, r)) - s * 0.05;
-  d = opUnion(d, sdfCapsule(x, y, cx, cy, cx + r * 0.62, cy - r * 0.55, s * 0.04));
-  d = opUnion(d, sdfCircle(x, y, cx, cy, s * 0.055));
-  // tick marks
-  for (let i = 0; i < 14; i++) {
-    const ang = -Math.PI * 0.75 + (i / 13) * Math.PI * 1.5;
-    const x1 = cx + Math.cos(ang) * (r + s * 0.02);
-    const y1 = cy + Math.sin(ang) * (r + s * 0.02);
-    const x2 = cx + Math.cos(ang) * (r + s * 0.08);
-    const y2 = cy + Math.sin(ang) * (r + s * 0.08);
-    d = opUnion(d, sdfCapsule(x, y, x1, y1, x2, y2, s * 0.018));
-  }
+  d = opUnion(d, sdfCapsule(x, y, cx, cy, cx + r * 0.55, cy - r * 0.5, s * 0.042));
+  d = opUnion(d, sdfCircle(x, y, cx, cy, s * 0.05));
   return d;
 }
 
 function drawLink(x, y, s) {
   const y0 = s / 2;
-  const left = sdfCircle(x, y, s * 0.36, y0, s * 0.14);
-  const right = sdfCircle(x, y, s * 0.64, y0, s * 0.14);
-  let d = Math.abs(left) - s * 0.045;
-  d = opUnion(d, Math.abs(right) - s * 0.045);
-  d = opUnion(d, sdfCapsule(x, y, s * 0.4, y0, s * 0.6, y0, s * 0.04));
+  let d = Math.abs(sdfCircle(x, y, s * 0.38, y0, s * 0.13)) - s * 0.045;
+  d = opUnion(d, Math.abs(sdfCircle(x, y, s * 0.62, y0, s * 0.13)) - s * 0.045);
+  d = opUnion(d, sdfCapsule(x, y, s * 0.42, y0, s * 0.58, y0, s * 0.04));
   return d;
 }
 
 function drawLinkOff(x, y, s) {
   let d = drawLink(x, y, s);
-  d = opUnion(d, sdfCapsule(x, y, s * 0.28, s * 0.72, s * 0.72, s * 0.28, s * 0.045));
+  d = opUnion(d, sdfCapsule(x, y, s * 0.3, s * 0.7, s * 0.7, s * 0.3, s * 0.045));
   return d;
-}
-
-function drawSwatches(x, y, s) {
-  // three overlapping color dots — label metaphor
-  const c1 = sdfCircle(x, y, s * 0.36, s * 0.42, s * 0.14);
-  const c2 = sdfCircle(x, y, s * 0.58, s * 0.4, s * 0.13);
-  const c3 = sdfCircle(x, y, s * 0.48, s * 0.6, s * 0.135);
-  return { c1, c2, c3 };
 }
 
 function drawBolt(x, y, s) {
   return fillPoly(x, y, [
-    [s * 0.58, s * 0.2],
-    [s * 0.34, s * 0.52],
+    [s * 0.56, s * 0.22],
+    [s * 0.36, s * 0.52],
     [s * 0.5, s * 0.52],
-    [s * 0.4, s * 0.8],
-    [s * 0.68, s * 0.46],
+    [s * 0.42, s * 0.78],
+    [s * 0.66, s * 0.46],
     [s * 0.52, s * 0.46],
   ]);
 }
 
 function drawLayers(x, y, s) {
-  let d = sdfRoundBox(x, y, s / 2, s * 0.38, s * 0.26, s * 0.07, s * 0.04);
-  d = opUnion(d, sdfRoundBox(x, y, s / 2, s * 0.52, s * 0.26, s * 0.07, s * 0.04));
-  d = opUnion(d, sdfRoundBox(x, y, s / 2, s * 0.66, s * 0.26, s * 0.07, s * 0.04));
+  let d = sdfRoundBox(x, y, s / 2, s * 0.38, s * 0.24, s * 0.065, s * 0.035);
+  d = opUnion(d, sdfRoundBox(x, y, s / 2, s * 0.52, s * 0.24, s * 0.065, s * 0.035));
+  d = opUnion(d, sdfRoundBox(x, y, s / 2, s * 0.66, s * 0.24, s * 0.065, s * 0.035));
   return d;
 }
 
 function drawCrop(x, y, s) {
-  const m = s * 0.26;
-  const e = s * 0.74;
-  let d = sdfCapsule(x, y, m, m, e, m, s * 0.035);
-  d = opUnion(d, sdfCapsule(x, y, m, m, m, e, s * 0.035));
-  d = opUnion(d, sdfCapsule(x, y, e, m + s * 0.18, e, e, s * 0.035));
-  d = opUnion(d, sdfCapsule(x, y, m + s * 0.18, e, e, e, s * 0.035));
-  // corner ticks
-  d = opUnion(d, sdfCapsule(x, y, m - s * 0.06, m, m + s * 0.12, m, s * 0.03));
-  d = opUnion(d, sdfCapsule(x, y, m, m - s * 0.06, m, m + s * 0.12, s * 0.03));
+  const m = s * 0.28;
+  const e = s * 0.72;
+  let d = sdfCapsule(x, y, m, m, e, m, s * 0.038);
+  d = opUnion(d, sdfCapsule(x, y, m, m, m, e, s * 0.038));
+  d = opUnion(d, sdfCapsule(x, y, e, m + s * 0.16, e, e, s * 0.038));
+  d = opUnion(d, sdfCapsule(x, y, m + s * 0.16, e, e, e, s * 0.038));
   return d;
 }
 
 function drawMask(x, y, s) {
-  const cx = s / 2;
-  const cy = s / 2;
-  const outer = sdfCircle(x, y, cx, cy, s * 0.28);
-  const cut = sdfCircle(x, y, cx + s * 0.1, cy, s * 0.22);
+  const outer = sdfCircle(x, y, s / 2, s / 2, s * 0.26);
+  const cut = sdfCircle(x, y, s / 2 + s * 0.1, s / 2, s * 0.2);
   return opSub(outer, cut);
 }
 
 function drawUndo(x, y, s) {
   const cx = s * 0.54;
   const cy = s * 0.52;
-  const r = s * 0.22;
+  const r = s * 0.2;
   let d = Infinity;
-  for (let a = 0.35; a < Math.PI * 1.45; a += 0.06) {
-    const ang = 0.2 + a;
-    const x1 = cx + Math.cos(ang) * r;
-    const y1 = cy + Math.sin(ang) * r;
-    const x2 = cx + Math.cos(ang + 0.08) * r;
-    const y2 = cy + Math.sin(ang + 0.08) * r;
-    d = Math.min(d, sdfCapsule(x, y, x1, y1, x2, y2, s * 0.038));
+  for (let a = 0.4; a < Math.PI * 1.4; a += 0.05) {
+    const ang = 0.25 + a;
+    d = Math.min(
+      d,
+      sdfCapsule(
+        x,
+        y,
+        cx + Math.cos(ang) * r,
+        cy + Math.sin(ang) * r,
+        cx + Math.cos(ang + 0.07) * r,
+        cy + Math.sin(ang + 0.07) * r,
+        s * 0.04,
+      ),
+    );
   }
-  const tipX = cx + Math.cos(0.55) * r;
-  const tipY = cy + Math.sin(0.55) * r;
-  d = opUnion(d, sdfCapsule(x, y, tipX, tipY, tipX + s * 0.12, tipY - s * 0.02, s * 0.035));
-  d = opUnion(d, sdfCapsule(x, y, tipX, tipY, tipX + s * 0.02, tipY + s * 0.12, s * 0.035));
+  const tipX = cx + Math.cos(0.6) * r;
+  const tipY = cy + Math.sin(0.6) * r;
+  d = opUnion(d, sdfCapsule(x, y, tipX, tipY, tipX + s * 0.1, tipY, s * 0.038));
+  d = opUnion(d, sdfCapsule(x, y, tipX, tipY, tipX, tipY + s * 0.1, s * 0.038));
   return d;
 }
 
 function drawSun(x, y, s) {
   const cx = s / 2;
   const cy = s / 2;
-  let d = sdfCircle(x, y, cx, cy, s * 0.14);
+  let d = sdfCircle(x, y, cx, cy, s * 0.13);
   for (let i = 0; i < 8; i++) {
-    const ang = (i * Math.PI) / 4 + Math.PI / 8;
+    const ang = (i * Math.PI) / 4;
     d = opUnion(
       d,
       sdfCapsule(
         x,
         y,
-        cx + Math.cos(ang) * s * 0.22,
-        cy + Math.sin(ang) * s * 0.22,
-        cx + Math.cos(ang) * s * 0.34,
-        cy + Math.sin(ang) * s * 0.34,
+        cx + Math.cos(ang) * s * 0.2,
+        cy + Math.sin(ang) * s * 0.2,
+        cx + Math.cos(ang) * s * 0.3,
+        cy + Math.sin(ang) * s * 0.3,
         s * 0.032,
       ),
     );
@@ -397,7 +368,6 @@ function drawSun(x, y, s) {
   return d;
 }
 
-/** Tiny 3×5 bitmap font for version stamp on Connection icons */
 const FONT3X5 = {
   "0": ["111", "101", "101", "101", "111"],
   "1": ["010", "110", "010", "010", "111"],
@@ -415,7 +385,6 @@ const FONT3X5 = {
 };
 
 function textSdf(x, y, text, ox, oy, scale) {
-  // scale = pixel size of each font cell
   let d = Infinity;
   let cursor = 0;
   for (const ch of text) {
@@ -425,7 +394,7 @@ function textSdf(x, y, text, ox, oy, scale) {
         if (glyph[row][col] !== "1") continue;
         const cx = ox + (cursor * 4 + col + 0.5) * scale;
         const cy = oy + (row + 0.5) * scale;
-        d = Math.min(d, sdfBox(x, y, cx, cy, scale * 0.55, scale * 0.55));
+        d = Math.min(d, sdfBox(x, y, cx, cy, scale * 0.48, scale * 0.48));
       }
     }
     cursor += 1;
@@ -433,91 +402,71 @@ function textSdf(x, y, text, ox, oy, scale) {
   return d;
 }
 
-function makeIcon(tint, ink, sdfFn, multi, badgeText) {
+function makeIcon(ink, sdfFn, multi, badgeText) {
   return (x, y, s) => {
-    let px = backdrop(x, y, s, tint);
+    let px = backdrop(x, y, s);
     if (px[3] === 0) return px;
 
-    // Shift glyph up when a version badge occupies the lower third
-    const gy = badgeText ? y + s * 0.16 : y;
+    const gy = badgeText ? y + s * 0.12 : y;
 
     if (multi) {
-      const parts = multi(x, gy, s);
-      for (const { sdf, color } of parts) {
-        px = glow(px, sdf, color, s * 0.12);
+      for (const { sdf, color } of multi(x, gy, s)) {
         px = layer(px, cover(sdf), color);
       }
     } else {
-      const sdf = sdfFn(x, gy, s);
-      px = glow(px, sdf, ink, s * 0.14);
-      px = layer(px, cover(sdf), ink);
+      px = layer(px, cover(sdfFn(x, gy, s)), ink);
     }
 
     if (badgeText) {
-      // Fit version stamp inside the tile (3×5 font, 4 cells per char incl. gap)
       const maxW = s * 0.78;
       const scale = Math.max(3, Math.floor(maxW / (badgeText.length * 4)));
-      const textW = badgeText.length * 4 * scale - scale; // last gap unused
+      const textW = badgeText.length * 4 * scale - scale;
       const textH = 5 * scale;
       const ox = (s - textW) / 2;
-      const oy = s * 0.68;
-      const plate = sdfRoundBox(
-        x,
-        y,
-        s / 2,
-        oy + textH / 2,
-        textW / 2 + scale * 0.7,
-        textH / 2 + scale * 0.5,
-        scale * 0.4,
-      );
-      px = layer(px, cover(plate, 1.0), [0, 0, 0, 255], 0.75);
-      const td = textSdf(x, y, badgeText, ox, oy, scale);
-      px = layer(px, cover(td, 0.7), [255, 255, 255, 255], 1);
+      const oy = s * 0.7;
+      const plate = sdfRoundBox(x, y, s / 2, oy + textH / 2, textW / 2 + scale * 0.6, textH / 2 + scale * 0.4, scale * 0.35);
+      px = layer(px, cover(plate, 0.7), [0, 0, 0, 255]);
+      px = layer(px, cover(textSdf(x, y, badgeText, ox, oy, scale), 0.65), [255, 255, 255, 255]);
     }
     return px;
   };
 }
 
-const GREEN = [64, 214, 140, 255];
-const RED = [245, 88, 88, 255];
+const GREEN = [72, 210, 130, 255];
+const RED = [240, 80, 80, 255];
 const GOLD = [255, 196, 64, 255];
-const AMBER = [255, 168, 56, 255];
-const BLUE = [88, 168, 255, 255];
-const PURPLE = [186, 140, 255, 255];
-const SLATE = [210, 218, 230, 255];
-const ROSE = [255, 120, 140, 255];
-const CYAN = [80, 220, 230, 255];
+const AMBER = [255, 170, 48, 255];
+const BLUE = [90, 170, 255, 255];
+const PURPLE = [180, 140, 255, 255];
+const SLATE = [220, 225, 235, 255];
+const CYAN = [80, 210, 220, 255];
 
-// Keep in sync with streamdeck/src/version.ts + package.json
-const VERSION_BADGE = "v1.3.1";
+const VERSION_BADGE = "v1.3.2";
 
 const icons = {
-  "plugin.png": makeIcon(AMBER, AMBER, drawSun, null, VERSION_BADGE),
-  "category.png": makeIcon(AMBER, AMBER, drawSun, null, VERSION_BADGE),
-  "actions/connection.png": makeIcon([40, 90, 60, 255], GREEN, drawLink, null, VERSION_BADGE),
-  "actions/connection-on.png": makeIcon([40, 90, 60, 255], GREEN, drawLink, null, VERSION_BADGE),
-  "actions/connection-off.png": makeIcon([90, 40, 40, 255], RED, drawLinkOff, null, VERSION_BADGE),
-  "actions/rating.png": makeIcon([90, 70, 20, 255], GOLD, drawStar),
-  "actions/flag.png": makeIcon([30, 80, 50, 255], GREEN, drawFlag),
-  "actions/reject.png": makeIcon([90, 35, 35, 255], RED, drawReject),
-  "actions/label.png": makeIcon([80, 40, 50, 255], ROSE, null, (x, y, s) => {
-    const { c1, c2, c3 } = drawSwatches(x, y, s);
-    return [
-      { sdf: c1, color: [255, 90, 90, 255] },
-      { sdf: c2, color: [255, 210, 70, 255] },
-      { sdf: c3, color: [90, 160, 255, 255] },
-    ];
-  }),
-  "actions/navigate.png": makeIcon([30, 50, 90, 255], BLUE, (x, y, s) => drawChevron(x, y, s, 1)),
-  "actions/navigate-left.png": makeIcon([30, 50, 90, 255], BLUE, (x, y, s) => drawChevron(x, y, s, -1)),
-  "actions/slider.png": makeIcon([90, 60, 20, 255], AMBER, drawSlider),
-  "actions/slider-dial.png": makeIcon([90, 60, 20, 255], AMBER, drawDial),
-  "actions/command.png": makeIcon([50, 55, 70, 255], SLATE, drawBolt),
-  "actions/preset.png": makeIcon([60, 40, 90, 255], PURPLE, drawLayers),
-  "actions/crop.png": makeIcon([55, 60, 70, 255], SLATE, drawCrop),
-  "actions/mask.png": makeIcon([60, 40, 90, 255], PURPLE, drawMask),
-  "actions/undo.png": makeIcon([50, 55, 70, 255], CYAN, drawUndo),
-  "actions/auto.png": makeIcon([90, 60, 20, 255], AMBER, drawSun),
+  "plugin.png": makeIcon(AMBER, drawSun, null, VERSION_BADGE),
+  "category.png": makeIcon(AMBER, drawSun, null, VERSION_BADGE),
+  "actions/connection.png": makeIcon(GREEN, drawLink, null, VERSION_BADGE),
+  "actions/connection-on.png": makeIcon(GREEN, drawLink, null, VERSION_BADGE),
+  "actions/connection-off.png": makeIcon(RED, drawLinkOff, null, VERSION_BADGE),
+  "actions/rating.png": makeIcon(GOLD, drawStar),
+  "actions/flag.png": makeIcon(GREEN, drawFlag),
+  "actions/reject.png": makeIcon(RED, drawReject),
+  "actions/label.png": makeIcon(SLATE, null, (x, y, s) => [
+    { sdf: sdfCircle(x, y, s * 0.36, s * 0.42, s * 0.12), color: [255, 90, 90, 255] },
+    { sdf: sdfCircle(x, y, s * 0.56, s * 0.4, s * 0.11), color: [255, 210, 70, 255] },
+    { sdf: sdfCircle(x, y, s * 0.47, s * 0.58, s * 0.115), color: [90, 160, 255, 255] },
+  ]),
+  "actions/navigate.png": makeIcon(BLUE, (x, y, s) => drawChevron(x, y, s, 1)),
+  "actions/navigate-left.png": makeIcon(BLUE, (x, y, s) => drawChevron(x, y, s, -1)),
+  "actions/slider.png": makeIcon(AMBER, drawSlider),
+  "actions/slider-dial.png": makeIcon(AMBER, drawDial),
+  "actions/command.png": makeIcon(SLATE, drawBolt),
+  "actions/preset.png": makeIcon(PURPLE, drawLayers),
+  "actions/crop.png": makeIcon(SLATE, drawCrop),
+  "actions/mask.png": makeIcon(PURPLE, drawMask),
+  "actions/undo.png": makeIcon(CYAN, drawUndo),
+  "actions/auto.png": makeIcon(AMBER, drawSun),
 };
 
 fs.mkdirSync(path.join(outDir, "actions"), { recursive: true });
@@ -526,7 +475,7 @@ for (const [rel, fn] of Object.entries(icons)) {
   const file72 = path.join(outDir, rel);
   const file144 = file72.replace(/\.png$/, "@2x.png");
   const hi = paint(HI, fn);
-  fs.writeFileSync(file144, pngFromRgba(HI, hi));
+  fs.writeFileSync(file144, pngFromRgba(MID, boxDownscale(hi, HI, MID)));
   fs.writeFileSync(file72, pngFromRgba(LO, boxDownscale(hi, HI, LO)));
   console.log("wrote", rel);
 }

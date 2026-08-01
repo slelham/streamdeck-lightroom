@@ -131,16 +131,28 @@ function Actions.handle(msg)
 		if rating < 0 then rating = 0 end
 		if rating > 5 then rating = 5 end
 		LrSelection.setRating(rating)
+		if msg.advance then
+			LrTasks.sleep(0.05)
+			LrSelection.nextPhoto()
+		end
 		return true
 	end
 
 	if cmd == "increaseRating" then
 		LrSelection.increaseRating()
+		if msg.advance then
+			LrTasks.sleep(0.05)
+			LrSelection.nextPhoto()
+		end
 		return true
 	end
 
 	if cmd == "decreaseRating" then
 		LrSelection.decreaseRating()
+		if msg.advance then
+			LrTasks.sleep(0.05)
+			LrSelection.nextPhoto()
+		end
 		return true
 	end
 
@@ -154,12 +166,21 @@ function Actions.handle(msg)
 			LrSelection.removeFlag()
 		end
 		Library.invalidateCounts()
+		-- Advance in the same task (separate nextPhoto races and can no-op)
+		if msg.advance and (flag == "pick" or flag == "reject") then
+			LrTasks.sleep(0.05)
+			LrSelection.nextPhoto()
+		end
 		return true
 	end
 
 	if cmd == "label" then
 		local label = msg.label or "none"
 		LrSelection.setColorLabel(label)
+		if msg.advance and label ~= "none" then
+			LrTasks.sleep(0.05)
+			LrSelection.nextPhoto()
+		end
 		return true
 	end
 

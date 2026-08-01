@@ -17,11 +17,12 @@ local LABEL_KEYS = {
 }
 
 local countCache = {
-	fetchedAt = 0, -- os.time() wall clock; do not use os.clock() (CPU time)
-	ttl = 4,
+	fetchedAt = 0,
+	ttl = 3,
 	pick = 0,
 	reject = 0,
 	lastError = nil,
+	method = nil,
 }
 
 local function catalog()
@@ -77,7 +78,6 @@ local function blankLabelFilter()
 	}
 end
 
---- labels: array of color names, e.g. { "blue", "green" }
 function Library.setLabelFilter(labels, opts)
 	opts = opts or {}
 	ensureLibrary()
@@ -106,11 +106,7 @@ function Library.setLabelFilter(labels, opts)
 		end
 	end
 
-	if not any then
-		filter.filtersActive = false
-	else
-		filter.filtersActive = true
-	end
+	filter.filtersActive = any and true or false
 
 	local ok, changed = pcall(function()
 		return cat:setViewFilter(filter)
@@ -144,7 +140,6 @@ function Library.clearAttributeFilter()
 	return true, { active = false, filter = Library.summarizeFilter(Library.getViewFilter()) }
 end
 
---- pickMode: "flagged" | "rejected" | "unflagged" | "" (clear pick part)
 function Library.setPickFilter(pickMode, opts)
 	opts = opts or {}
 	ensureLibrary()
@@ -206,29 +201,20 @@ local function countTable(photos)
 	for _ in ipairs(photos) do
 		n = n + 1
 	end
-	-- Some LR builds return map-like tables; fall back to #
-	if n == 0 and photos[1] == nil then
-		return #photos
+	if n == 0 then
+		n = #photos
 	end
 	return n
 end
 
---- Try several searchDesc shapes — LR versions differ slightly.
-local function countByPick(value)
+--- Smart-collection style searchDesc (combine required for array form).
+local function countByFindPhotos(value)
 	local cat = catalog()
 	if not cat then
 		return nil, "no catalog"
 	end
 
 	local attempts = {
-		-- Flat descriptor (classic SDK docs)
-		{
-			criteria = "pick",
-			operation = "==",
-			value = value,
-			value2 = value,
-		},
-		-- Array form used by smart collections
 		{
 			{
 				criteria = "pick",
@@ -236,26 +222,65 @@ local function countByPick(value)
 				value = value,
 				value2 = value,
 			},
+			combine = "intersect",
 		},
-		-- Without value2
+		{
+			{
+				criteria = "pick",
+				operation = "==",
+				value = value,
+				value2 = "",
+			},
+			combine = "intersect",
+		},
 		{
 			criteria = "pick",
 			operation = "==",
 			value = value,
+			value2 = value,
 		},
 	}
 
-	local lastErr = "findPhotos failed"
+	local lastErr = nil
 	for _, desc in ipairs(attempts) do
 		local ok, photos = pcall(function()
 			return cat:findPhotos { searchDesc = desc }
 		end)
 		if ok and type(photos) == "table" then
-			return countTable(photos)
+			return countTable(photos), nil
 		end
 		lastErr = tostring(photos)
 	end
-	return nil, lastErr
+	return nil, lastErr or "findPhotos failed"
+end
+
+--- Reliable fallback: scan catalog pickStatus (works when findPhotos mis-searches).
+local function countByScan()
+	local cat = catalog()
+	if not cat then
+		return nil, nil, "no catalog"
+	end
+	local ok, photos = pcall(function()
+		return cat:getAllPhotos()
+	end)
+	if not ok or type(photos) ~= "table" then
+		return nil, nil, "getAllPhotos failed: " .. tostring(photos)
+	end
+
+	local pick = 0
+	local reject = 0
+	for _, photo in ipairs(photos) do
+		local status = 0
+		pcall(function()
+			status = photo:getRawMetadata("pickStatus") or 0
+		end)
+		if status == 1 then
+			pick = pick + 1
+		elseif status == -1 then
+			reject = reject + 1
+		end
+	end
+	return pick, reject, nil
 end
 
 function Library.getFlagCounts(force)
@@ -267,22 +292,31 @@ function Library.getFlagCounts(force)
 			totalFlagged = countCache.pick,
 			cached = true,
 			error = countCache.lastError,
+			method = countCache.method,
 		}
 	end
 
-	local pick, pickErr = countByPick(1)
-	local reject, rejectErr = countByPick(-1)
-
+	local pick, pickErr = countByFindPhotos(1)
+	local reject, rejectErr = countByFindPhotos(-1)
+	local method = "findPhotos"
 	local err = pickErr or rejectErr
-	if pick == nil and reject == nil then
-		countCache.lastError = err
-		return {
-			pick = countCache.pick or 0,
-			reject = countCache.reject or 0,
-			totalFlagged = countCache.pick or 0,
-			cached = true,
-			error = err,
-		}
+
+	-- If findPhotos fails OR returns zeros while we can scan, prefer scan.
+	-- (findPhotos often returns {} with a bad searchDesc instead of erroring.)
+	local needScan = (pick == nil and reject == nil) or (pick == 0 and reject == 0)
+	if needScan then
+		local sp, sr, sErr = countByScan()
+		if sp ~= nil then
+			-- Keep scan result if findPhotos was empty/failed, or scan found more
+			if pick == nil or reject == nil or sp > (pick or 0) or sr > (reject or 0) or (pick == 0 and reject == 0 and (sp > 0 or sr > 0)) then
+				pick = sp
+				reject = sr
+				method = "scan"
+				err = sErr
+			end
+		elseif pick == nil then
+			err = sErr or err
+		end
 	end
 
 	if pick == nil then
@@ -296,6 +330,7 @@ function Library.getFlagCounts(force)
 	countCache.reject = reject
 	countCache.fetchedAt = now
 	countCache.lastError = err
+	countCache.method = method
 
 	return {
 		pick = pick,
@@ -303,6 +338,7 @@ function Library.getFlagCounts(force)
 		totalFlagged = pick,
 		cached = false,
 		error = err,
+		method = method,
 	}
 end
 

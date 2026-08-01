@@ -17,7 +17,7 @@ end
 LrDialogs.message(
 	"Stream Deck Lightroom Bridge",
 	string.format(
-		"Plugin version: %s\n\nRunning: %s\nReceive port (commands): %d\nSend port (state): %d\nReceive connected: %s\nSend connected: %s\n\nFlagged (picks): %s\nRejects: %s%s\n\nEnable this plug-in, then launch the Stream Deck plugin.\nConnection key icon should show v1.3.1; title “v1.3.1 Online”.",
+		"Plugin version: %s\n\nRunning: %s\nReceive port (commands): %d\nSend port (state): %d\nReceive connected: %s\nSend connected: %s\n\nFlagged (picks): %s\nRejects: %s\nCount method: %s%s\n\nConnection key icon should show v1.3.2.",
 		version,
 		tostring(running),
 		Config.RECEIVE_PORT,
@@ -26,6 +26,7 @@ LrDialogs.message(
 		tostring(send),
 		tostring(counts.pick or "?"),
 		tostring(counts.reject or "?"),
+		tostring(counts.method or "?"),
 		errLine
 	)
 )
