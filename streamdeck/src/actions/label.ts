@@ -5,11 +5,13 @@ import {
   type WillAppearEvent,
 } from "@elgato/streamdeck";
 
+import { sendCullThenAdvance } from "../utils/advance";
 import { bridge } from "../bridge/client";
+import { asBool } from "../utils/settings";
 
 type LabelSettings = {
   label?: "red" | "yellow" | "green" | "blue" | "purple" | "none";
-  autoAdvance?: boolean;
+  autoAdvance?: boolean | string;
 };
 
 @action({ UUID: "com.cursor.lightroom.label" })
@@ -23,10 +25,8 @@ export class LabelAction extends SingletonAction<LabelSettings> {
     const label = settings.label ?? "red";
     const current = (bridge.state.label || "none").toLowerCase();
     const next = current === label ? "none" : label;
-    const ok = await bridge.sendSafe({ cmd: "label", label: next });
-    if (ok && settings.autoAdvance && next !== "none") {
-      await bridge.sendSafe({ cmd: "nextPhoto" });
-    }
+    const advance = asBool(settings.autoAdvance) && next !== "none";
+    const ok = await sendCullThenAdvance({ cmd: "label", label: next }, advance);
     if (!ok) await ev.action.showAlert();
     await this.paint(ev.action, settings);
   }

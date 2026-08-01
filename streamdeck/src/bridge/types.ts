@@ -51,6 +51,8 @@ export interface LightroomState {
   rating?: number;
   flag?: FlagState;
   label?: string;
+  /** Active catalog photo localIdentifier — used to avoid double-advance */
+  photoId?: number | string;
   tool?: string;
   params?: Record<string, number>;
   presetBrowser?: PresetBrowserState;

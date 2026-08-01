@@ -7,7 +7,7 @@ A practical first page for culling + basic develop. Drag actions from **Lightroo
 | Pick (toggle) | Reject (toggle) | ★1 | ★2 | ★3 | ★4 | ★5 | Unflag |
 |---|---|---|---|---|---|---|---|
 
-- Flag actions: set **Toggle pick** / **Toggle reject**, enable **Auto-advance** if you like.
+- Flag actions: set **Toggle pick** / **Toggle reject**; **Auto-advance** defaults on (turn Caps Lock / Photo → Auto Advance **off** in Lightroom so you don’t double-step).
 - Rating actions: mode **Set rating**, stars 1–5, optional auto-advance.
 
 ## Row 2 — Labels + nav

@@ -6,11 +6,13 @@ import {
 } from "@elgato/streamdeck";
 
 import { bridge } from "../bridge/client";
+import { sendCullThenAdvance } from "../utils/advance";
 import { formatFlag } from "../utils/format";
+import { asBool } from "../utils/settings";
 
 type FlagSettings = {
   flag?: "pick" | "reject" | "none" | "toggle-pick" | "toggle-reject";
-  autoAdvance?: boolean;
+  autoAdvance?: boolean | string;
 };
 
 @action({ UUID: "com.cursor.lightroom.flag" })
@@ -23,6 +25,9 @@ export class FlagAction extends SingletonAction<FlagSettings> {
     const settings = ev.payload.settings;
     const mode = settings.flag ?? "pick";
     const current = bridge.state.flag ?? 0;
+    // Default ON for culling (profile keys + newly dragged keys)
+    const advance =
+      settings.autoAdvance === undefined ? true : asBool(settings.autoAdvance);
 
     let flag: "pick" | "reject" | "none" = "pick";
     if (mode === "toggle-pick") {
@@ -33,10 +38,11 @@ export class FlagAction extends SingletonAction<FlagSettings> {
       flag = mode;
     }
 
-    const ok = await bridge.sendSafe({ cmd: "flag", flag });
-    if (ok && settings.autoAdvance && (flag === "pick" || flag === "reject")) {
-      await bridge.sendSafe({ cmd: "nextPhoto" });
-    }
+    // Same sequence as a Stream Deck multi-action: Pick, pause, Next.
+    const ok = await sendCullThenAdvance(
+      { cmd: "flag", flag },
+      advance && (flag === "pick" || flag === "reject"),
+    );
     if (!ok) await ev.action.showAlert();
     await this.paint(ev.action, settings);
   }
