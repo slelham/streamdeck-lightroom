@@ -472,7 +472,9 @@ function Actions.handle(msg)
 
 	if cmd == "getFlagCounts" then
 		Library.invalidateCounts()
-		return true, Library.getFlagCounts(true)
+		-- Nest under flagCounts so Stream Deck never confuses this with
+		-- setPickFilter's pick = "flagged" string field.
+		return true, { flagCounts = Library.getFlagCounts(true) }
 	end
 
 	return false, "unknown cmd: " .. tostring(cmd)
