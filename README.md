@@ -17,7 +17,7 @@ Live slider values, culling feedback, dials, AI masks, a **live Develop preset b
 | **Apply Preset action** | Property Inspector dropdown filled live from Lightroom |
 | **Label filter** | One-tap Library filter for blue+green (or other label sets) |
 | **Flag count** | Live pick/reject counts; optional filter to flagged photos |
-| **Profile pack** | Auto-install layouts for XL, MK.2, and Plus |
+| **Profile pack** | Library + Develop workspaces for XL / MK.2 / Plus (dials on Plus) |
 | Develop helpers | Auto Tone, reset, undo/redo, copy/paste, tools, before/after |
 | AI masks | Subject / Sky / Background / People |
 

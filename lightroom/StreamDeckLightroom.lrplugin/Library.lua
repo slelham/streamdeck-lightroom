@@ -17,7 +17,7 @@ local LABEL_KEYS = {
 }
 
 local countCache = {
-	fetchedAt = 0,
+	fetchedAt = 0, -- os.time() wall clock; do not use os.clock() (CPU time)
 	ttl = 4,
 	pick = 0,
 	reject = 0,
@@ -204,25 +204,30 @@ end
 local function countByPick(value)
 	local cat = catalog()
 	if not cat then
-		return 0
+		return nil, "no catalog"
 	end
+	-- pick: 1 = flagged, 0 = unflagged, -1 = rejected (LrCatalog.findPhotos)
 	local ok, photos = pcall(function()
 		return cat:findPhotos {
 			searchDesc = {
 				criteria = "pick",
 				operation = "==",
 				value = value,
+				value2 = value,
 			},
 		}
 	end)
-	if ok and type(photos) == "table" then
-		return #photos
+	if not ok then
+		return nil, tostring(photos)
 	end
-	return 0
+	if type(photos) ~= "table" then
+		return nil, "findPhotos returned non-table"
+	end
+	return #photos
 end
 
 function Library.getFlagCounts(force)
-	local now = os.clock()
+	local now = os.time()
 	if not force and countCache.fetchedAt > 0 and (now - countCache.fetchedAt) < countCache.ttl then
 		return {
 			pick = countCache.pick,
@@ -232,8 +237,15 @@ function Library.getFlagCounts(force)
 		}
 	end
 
-	local pick = countByPick(1)
-	local reject = countByPick(-1)
+	local pick, pickErr = countByPick(1)
+	local reject, rejectErr = countByPick(-1)
+	if pick == nil then
+		pick = countCache.pick or 0
+	end
+	if reject == nil then
+		reject = countCache.reject or 0
+	end
+
 	countCache.pick = pick
 	countCache.reject = reject
 	countCache.fetchedAt = now
@@ -243,6 +255,7 @@ function Library.getFlagCounts(force)
 		reject = reject,
 		totalFlagged = pick,
 		cached = false,
+		error = pickErr or rejectErr,
 	}
 end
 
