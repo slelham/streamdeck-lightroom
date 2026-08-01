@@ -1,13 +1,13 @@
 {
   "$schema": "https://schemas.elgato.com/streamdeck/plugins/manifest.json",
   "UUID": "com.cursor.lightroom",
-  "Name": "Lightroom Classic",
-  "Version": "1.2.0.0",
+  "Name": "Lightroom Classic 1.4.1",
+  "Version": "1.4.1.0",
   "Author": "Cursor",
   "Category": "Lightroom Classic",
   "CategoryIcon": "imgs/category",
   "Icon": "imgs/plugin",
-  "Description": "Two-way Lightroom Classic controls: live develop sliders, culling feedback, dials, AI masks, live preset browser, and polished profile packs for XL / MK.2 / Plus. Requires the included Lightroom companion plug-in.",
+  "Description": "Two-way Lightroom Classic controls: cull dial, live flag/rating/label states, Tone Curve & Color Grading dials, AI masks, snapshots, sync, AI Enhance, and profile packs for XL / MK.2 / Mini / Neo / Plus / +XL. Requires the included Lightroom companion plug-in.",
   "CodePath": "bin/plugin.js",
   "SDKVersion": 2,
   "Software": {
@@ -29,11 +29,13 @@
   },
   "Actions": [
     {
-      "Name": "Connection",
+      "Name": "Connection \u00b7 v1.4.1",
       "UUID": "com.cursor.lightroom.connection",
       "Icon": "imgs/actions/connection",
-      "Tooltip": "Shows whether the Lightroom bridge is online. Press to refresh.",
-      "Controllers": ["Keypad"],
+      "Tooltip": "Lightroom bridge status (plugin v1.4.1). Press to refresh. Title should read v1.4.1 Online.",
+      "Controllers": [
+        "Keypad"
+      ],
       "States": [
         {
           "Image": "imgs/actions/connection-on",
@@ -51,12 +53,23 @@
       "Name": "Rating",
       "UUID": "com.cursor.lightroom.rating",
       "Icon": "imgs/actions/rating",
-      "Tooltip": "Set or adjust star ratings with live feedback.",
+      "Tooltip": "Set or adjust star ratings with live feedback. Key lights when current rating matches.",
       "PropertyInspectorPath": "ui/rating.html",
-      "Controllers": ["Keypad", "Encoder"],
+      "Controllers": [
+        "Keypad",
+        "Encoder"
+      ],
+      "DisableAutomaticStates": true,
       "States": [
         {
           "Image": "imgs/actions/rating",
+          "Name": "Idle",
+          "TitleAlignment": "middle",
+          "FontSize": 11
+        },
+        {
+          "Image": "imgs/actions/rating-active",
+          "Name": "Active",
           "TitleAlignment": "middle",
           "FontSize": 11
         }
@@ -73,12 +86,22 @@
       "Name": "Flag",
       "UUID": "com.cursor.lightroom.flag",
       "Icon": "imgs/actions/flag",
-      "Tooltip": "Pick, reject, or unflag the current photo.",
+      "Tooltip": "Pick, reject, or unflag. Key lights when the photo matches this flag.",
       "PropertyInspectorPath": "ui/flag.html",
-      "Controllers": ["Keypad"],
+      "Controllers": [
+        "Keypad"
+      ],
+      "DisableAutomaticStates": true,
       "States": [
         {
           "Image": "imgs/actions/flag",
+          "Name": "Idle",
+          "TitleAlignment": "middle",
+          "FontSize": 11
+        },
+        {
+          "Image": "imgs/actions/flag-active",
+          "Name": "Active",
           "TitleAlignment": "middle",
           "FontSize": 11
         }
@@ -88,12 +111,22 @@
       "Name": "Color Label",
       "UUID": "com.cursor.lightroom.label",
       "Icon": "imgs/actions/label",
-      "Tooltip": "Toggle a color label on the current photo.",
+      "Tooltip": "Toggle a color label. Key lights when the photo has this label.",
       "PropertyInspectorPath": "ui/label.html",
-      "Controllers": ["Keypad"],
+      "Controllers": [
+        "Keypad"
+      ],
+      "DisableAutomaticStates": true,
       "States": [
         {
           "Image": "imgs/actions/label",
+          "Name": "Idle",
+          "TitleAlignment": "middle",
+          "FontSize": 11
+        },
+        {
+          "Image": "imgs/actions/label-active",
+          "Name": "Active",
           "TitleAlignment": "middle",
           "FontSize": 11
         }
@@ -105,7 +138,10 @@
       "Icon": "imgs/actions/navigate",
       "Tooltip": "Go to the next or previous photo.",
       "PropertyInspectorPath": "ui/navigate.html",
-      "Controllers": ["Keypad", "Encoder"],
+      "Controllers": [
+        "Keypad",
+        "Encoder"
+      ],
       "States": [
         {
           "Image": "imgs/actions/navigate",
@@ -124,9 +160,11 @@
       "Name": "Develop Slider",
       "UUID": "com.cursor.lightroom.slider",
       "Icon": "imgs/actions/slider",
-      "Tooltip": "Nudge a Develop slider with live value on the key. Hold to repeat.",
+      "Tooltip": "Nudge a Develop slider (Basic, Tone Curve, Color Grading, Detail). Hold to repeat.",
       "PropertyInspectorPath": "ui/slider.html",
-      "Controllers": ["Keypad"],
+      "Controllers": [
+        "Keypad"
+      ],
       "States": [
         {
           "Image": "imgs/actions/slider",
@@ -141,7 +179,9 @@
       "Icon": "imgs/actions/slider-dial",
       "Tooltip": "Rotate to adjust a Develop slider with live LCD feedback. Press to reset.",
       "PropertyInspectorPath": "ui/slider-dial.html",
-      "Controllers": ["Encoder"],
+      "Controllers": [
+        "Encoder"
+      ],
       "States": [
         {
           "Image": "imgs/actions/slider-dial",
@@ -159,12 +199,39 @@
       }
     },
     {
+      "Name": "Cull Dial",
+      "UUID": "com.cursor.lightroom.cull-dial",
+      "Icon": "imgs/actions/cull-dial",
+      "Tooltip": "Pro cull dial: rotate rating, press to advance, tap for zoom 1:1.",
+      "PropertyInspectorPath": "ui/cull-dial.html",
+      "Controllers": [
+        "Encoder"
+      ],
+      "States": [
+        {
+          "Image": "imgs/actions/cull-dial",
+          "TitleAlignment": "middle",
+          "FontSize": 11
+        }
+      ],
+      "Encoder": {
+        "layout": "$A1",
+        "TriggerDescription": {
+          "Rotate": "Change rating",
+          "Push": "Next photo",
+          "Touch": "Zoom 1:1"
+        }
+      }
+    },
+    {
       "Name": "Lightroom Command",
       "UUID": "com.cursor.lightroom.command",
       "Icon": "imgs/actions/command",
-      "Tooltip": "Undo, Auto Tone, AI masks, tools, modules, views, and more.",
+      "Tooltip": "Undo, Auto Tone/WB, AI masks, snapshots, sync, AI Enhance, tools, modules, views.",
       "PropertyInspectorPath": "ui/command.html",
-      "Controllers": ["Keypad"],
+      "Controllers": [
+        "Keypad"
+      ],
       "States": [
         {
           "Image": "imgs/actions/command",
@@ -179,7 +246,10 @@
       "Icon": "imgs/actions/preset",
       "Tooltip": "Change Develop preset folder or page in the live browser.",
       "PropertyInspectorPath": "ui/preset-nav.html",
-      "Controllers": ["Keypad", "Encoder"],
+      "Controllers": [
+        "Keypad",
+        "Encoder"
+      ],
       "States": [
         {
           "Image": "imgs/actions/preset",
@@ -194,7 +264,9 @@
       "Icon": "imgs/actions/preset",
       "Tooltip": "Shows a live preset from the current browser page. Press to apply.",
       "PropertyInspectorPath": "ui/preset-slot.html",
-      "Controllers": ["Keypad"],
+      "Controllers": [
+        "Keypad"
+      ],
       "States": [
         {
           "Image": "imgs/actions/preset",
@@ -209,7 +281,9 @@
       "Icon": "imgs/actions/preset",
       "Tooltip": "Pick any Develop preset from a live Lightroom list and apply it.",
       "PropertyInspectorPath": "ui/preset-apply.html",
-      "Controllers": ["Keypad"],
+      "Controllers": [
+        "Keypad"
+      ],
       "States": [
         {
           "Image": "imgs/actions/preset",
@@ -224,7 +298,9 @@
       "Icon": "imgs/actions/label",
       "Tooltip": "Show only photos with selected color labels (e.g. blue + green). Toggle on/off.",
       "PropertyInspectorPath": "ui/label-filter.html",
-      "Controllers": ["Keypad"],
+      "Controllers": [
+        "Keypad"
+      ],
       "DisableAutomaticStates": true,
       "States": [
         {
@@ -247,7 +323,9 @@
       "Icon": "imgs/actions/flag",
       "Tooltip": "Live count of flagged photos. Optionally filter the Library to flagged/rejects.",
       "PropertyInspectorPath": "ui/flag-count.html",
-      "Controllers": ["Keypad"],
+      "Controllers": [
+        "Keypad"
+      ],
       "States": [
         {
           "Image": "imgs/actions/flag",
@@ -273,8 +351,29 @@
       "AutoInstall": true
     },
     {
+      "Name": "profiles/lightroom-classic-mini",
+      "DeviceType": 1,
+      "Readonly": false,
+      "DontAutoSwitchWhenInstalled": true,
+      "AutoInstall": true
+    },
+    {
       "Name": "profiles/lightroom-classic-plus",
       "DeviceType": 7,
+      "Readonly": false,
+      "DontAutoSwitchWhenInstalled": true,
+      "AutoInstall": true
+    },
+    {
+      "Name": "profiles/lightroom-classic-neo",
+      "DeviceType": 9,
+      "Readonly": false,
+      "DontAutoSwitchWhenInstalled": true,
+      "AutoInstall": true
+    },
+    {
+      "Name": "profiles/lightroom-classic-plus-xl",
+      "DeviceType": 13,
       "Readonly": false,
       "DontAutoSwitchWhenInstalled": true,
       "AutoInstall": true
