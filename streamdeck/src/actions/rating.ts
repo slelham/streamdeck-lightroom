@@ -61,10 +61,12 @@ export class RatingAction extends SingletonAction<RatingSettings> {
     action: {
       setTitle(title: string): Promise<void>;
       setFeedback?(feedback: Record<string, unknown>): Promise<void>;
+      setState?(state: number): Promise<void>;
     },
     settings: RatingSettings,
   ): Promise<void> {
     const live = formatRating(bridge.state.rating);
+    const liveN = Math.max(0, Math.min(5, Math.round(bridge.state.rating ?? 0)));
     const mode = settings.mode ?? "set";
     if (mode === "set") {
       await action.setTitle(`${Number(settings.rating ?? 0)}★\n${live}`);
@@ -77,6 +79,15 @@ export class RatingAction extends SingletonAction<RatingSettings> {
     }
     if (action.setFeedback) {
       await action.setFeedback({ title: "Rating", value: live });
+    }
+    // State mirrors live rating (0–5) for set/cycle keys; for ± keys, 1 when any stars
+    if (action.setState) {
+      if (mode === "set") {
+        const target = Math.max(0, Math.min(5, Math.round(Number(settings.rating ?? 0))));
+        await action.setState(liveN === target ? 1 : 0);
+      } else {
+        await action.setState(liveN > 0 ? 1 : 0);
+      }
     }
   }
 }

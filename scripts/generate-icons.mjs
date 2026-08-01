@@ -441,7 +441,26 @@ const PURPLE = [180, 140, 255, 255];
 const SLATE = [220, 225, 235, 255];
 const CYAN = [80, 210, 220, 255];
 
-const VERSION_BADGE = "v1.3.2";
+const VERSION_BADGE = "v1.4.0";
+
+/** Active-state backdrop: slightly brighter rim so live keys pop */
+function makeActiveIcon(ink, sdfFn, multi) {
+  return (x, y, s) => {
+    let px = backdrop(x, y, s);
+    if (px[3] === 0) return px;
+    // Soft inner wash for “lit” state (no glow glow-stack)
+    const wash = cover(sdfRoundBox(x, y, s / 2, s / 2, s * 0.38, s * 0.38, s * 0.14), 1.2) * 0.22;
+    px = layer(px, wash, ink);
+    if (multi) {
+      for (const { sdf, color } of multi(x, y, s)) {
+        px = layer(px, cover(sdf), color);
+      }
+    } else {
+      px = layer(px, cover(sdfFn(x, y, s)), ink);
+    }
+    return px;
+  };
+}
 
 const icons = {
   "plugin.png": makeIcon(AMBER, drawSun, null, VERSION_BADGE),
@@ -450,23 +469,35 @@ const icons = {
   "actions/connection-on.png": makeIcon(GREEN, drawLink, null, VERSION_BADGE),
   "actions/connection-off.png": makeIcon(RED, drawLinkOff, null, VERSION_BADGE),
   "actions/rating.png": makeIcon(GOLD, drawStar),
+  "actions/rating-active.png": makeActiveIcon(GOLD, drawStar),
   "actions/flag.png": makeIcon(GREEN, drawFlag),
+  "actions/flag-active.png": makeActiveIcon(GREEN, drawFlag),
   "actions/reject.png": makeIcon(RED, drawReject),
+  "actions/reject-active.png": makeActiveIcon(RED, drawReject),
   "actions/label.png": makeIcon(SLATE, null, (x, y, s) => [
     { sdf: sdfCircle(x, y, s * 0.36, s * 0.42, s * 0.12), color: [255, 90, 90, 255] },
     { sdf: sdfCircle(x, y, s * 0.56, s * 0.4, s * 0.11), color: [255, 210, 70, 255] },
     { sdf: sdfCircle(x, y, s * 0.47, s * 0.58, s * 0.115), color: [90, 160, 255, 255] },
   ]),
+  "actions/label-active.png": makeActiveIcon(BLUE, null, (x, y, s) => [
+    { sdf: sdfCircle(x, y, s / 2, s / 2, s * 0.22), color: [90, 170, 255, 255] },
+  ]),
   "actions/navigate.png": makeIcon(BLUE, (x, y, s) => drawChevron(x, y, s, 1)),
   "actions/navigate-left.png": makeIcon(BLUE, (x, y, s) => drawChevron(x, y, s, -1)),
   "actions/slider.png": makeIcon(AMBER, drawSlider),
   "actions/slider-dial.png": makeIcon(AMBER, drawDial),
+  "actions/cull-dial.png": makeIcon(GOLD, null, (x, y, s) => [
+    { sdf: drawDial(x, y, s), color: GOLD },
+    { sdf: starSdf(x, y, s * 0.72, s * 0.3, s * 0.1, s * 0.04, 5), color: [255, 230, 140, 255] },
+  ]),
   "actions/command.png": makeIcon(SLATE, drawBolt),
   "actions/preset.png": makeIcon(PURPLE, drawLayers),
   "actions/crop.png": makeIcon(SLATE, drawCrop),
   "actions/mask.png": makeIcon(PURPLE, drawMask),
   "actions/undo.png": makeIcon(CYAN, drawUndo),
   "actions/auto.png": makeIcon(AMBER, drawSun),
+  "actions/snapshot.png": makeIcon(CYAN, drawLayers),
+  "actions/enhance.png": makeIcon(GREEN, drawBolt),
 };
 
 fs.mkdirSync(path.join(outDir, "actions"), { recursive: true });

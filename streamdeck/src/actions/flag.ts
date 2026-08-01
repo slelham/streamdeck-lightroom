@@ -46,17 +46,33 @@ export class FlagAction extends SingletonAction<FlagSettings> {
   }
 
   async paint(
-    action: { setTitle(title: string): Promise<void> },
+    action: {
+      setTitle(title: string): Promise<void>;
+      setState?(state: number): Promise<void>;
+      setImage?(path: string): Promise<void>;
+    },
     settings: FlagSettings,
   ): Promise<void> {
     const live = formatFlag(bridge.state.flag);
     const mode = settings.flag ?? "pick";
-    const label =
-      mode === "pick" || mode === "toggle-pick"
-        ? "Pick"
-        : mode === "reject" || mode === "toggle-reject"
-          ? "Reject"
-          : "Unflag";
+    const current = bridge.state.flag ?? 0;
+    const isPickMode = mode === "pick" || mode === "toggle-pick";
+    const isRejectMode = mode === "reject" || mode === "toggle-reject";
+    const active =
+      (isPickMode && current === 1) ||
+      (isRejectMode && current === -1) ||
+      (mode === "none" && current === 0);
+
+    const label = isPickMode ? "Pick" : isRejectMode ? "Reject" : "Unflag";
     await action.setTitle(`${label}\n${live}`);
+
+    // Live key art: pick/reject/unflag each have idle + active images
+    if (action.setImage) {
+      const base = isRejectMode || mode === "none" ? "reject" : "flag";
+      const suffix = active ? "-active" : "";
+      await action.setImage(`imgs/actions/${base}${suffix}`);
+    } else if (action.setState) {
+      await action.setState(active ? 1 : 0);
+    }
   }
 }

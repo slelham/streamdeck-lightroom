@@ -31,12 +31,18 @@ export class LabelAction extends SingletonAction<LabelSettings> {
   }
 
   async paint(
-    action: { setTitle(title: string): Promise<void> },
+    action: {
+      setTitle(title: string): Promise<void>;
+      setState?(state: number): Promise<void>;
+    },
     settings: LabelSettings,
   ): Promise<void> {
     const target = settings.label ?? "red";
     const live = bridge.state.label || "none";
-    const active = live.toLowerCase() === target ? "●" : "○";
-    await action.setTitle(`${target}\n${active} ${live}`);
+    const active = live.toLowerCase() === target;
+    await action.setTitle(`${target}\n${active ? "●" : "○"} ${live}`);
+    if (action.setState) {
+      await action.setState(active ? 1 : 0);
+    }
   }
 }

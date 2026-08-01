@@ -2,6 +2,7 @@
   Command handlers executed inside Lightroom Classic.
 ]]
 
+local LrApplication = import "LrApplication"
 local LrApplicationView = import "LrApplicationView"
 local LrDevelopController = import "LrDevelopController"
 local LrSelection = import "LrSelection"
@@ -40,6 +41,18 @@ local function ensureDevelop()
 			LrTasks.sleep(0.2)
 		end
 	end
+end
+
+local function targetPhoto()
+	local catalog = LrApplication.activeCatalog()
+	if not catalog then
+		return nil, nil, "no catalog"
+	end
+	local photo = catalog:getTargetPhoto()
+	if not photo then
+		return nil, catalog, "no photo selected"
+	end
+	return photo, catalog, nil
 end
 
 function Actions.getState(opts)
@@ -381,6 +394,38 @@ function Actions.handle(msg)
 		return Actions.handle({ cmd = "createMask", maskType = "aiSelection", subtype = "people" })
 	end
 
+	if cmd == "selectObjects" then
+		return Actions.handle({ cmd = "createMask", maskType = "aiSelection", subtype = "objects" })
+	end
+
+	if cmd == "selectLandscape" then
+		return Actions.handle({ cmd = "createMask", maskType = "aiSelection", subtype = "landscape" })
+	end
+
+	if cmd == "maskBrush" then
+		return Actions.handle({ cmd = "createMask", maskType = "brush" })
+	end
+
+	if cmd == "maskLinear" then
+		return Actions.handle({ cmd = "createMask", maskType = "gradient" })
+	end
+
+	if cmd == "maskRadial" then
+		return Actions.handle({ cmd = "createMask", maskType = "radialGradient" })
+	end
+
+	if cmd == "maskRangeColor" then
+		return Actions.handle({ cmd = "createMask", maskType = "rangeMask", subtype = "color" })
+	end
+
+	if cmd == "maskRangeLuminance" then
+		return Actions.handle({ cmd = "createMask", maskType = "rangeMask", subtype = "luminance" })
+	end
+
+	if cmd == "maskRangeDepth" then
+		return Actions.handle({ cmd = "createMask", maskType = "rangeMask", subtype = "depth" })
+	end
+
 	if cmd == "copySettings" then
 		ensureDevelop()
 		local ok = safeCall(function()
@@ -395,6 +440,189 @@ function Actions.handle(msg)
 			LrDevelopController.pasteSettings()
 		end)
 		return ok
+	end
+
+	-- Sync develop settings from the most-selected photo to the rest of the selection
+	if cmd == "syncSettings" then
+		ensureDevelop()
+		local photo, catalog, err = targetPhoto()
+		if err then
+			return false, err
+		end
+		local settings
+		local okRead = pcall(function()
+			settings = photo:getDevelopSettings()
+		end)
+		if not okRead or type(settings) ~= "table" then
+			return false, "cannot read develop settings"
+		end
+		local selected = catalog:getTargetPhotos() or { photo }
+		local applied = 0
+		local okWrite, writeErr = pcall(function()
+			catalog:withWriteAccessDo("Sync settings", function()
+				for _, p in ipairs(selected) do
+					if p ~= photo then
+						p:applyDevelopSettings(settings)
+						applied = applied + 1
+					end
+				end
+			end, { timeout = 8 })
+		end)
+		if not okWrite then
+			return false, tostring(writeErr)
+		end
+		return true, { applied = applied }
+	end
+
+	if cmd == "autoWhiteBalance" then
+		ensureDevelop()
+		local ok = safeCall(function()
+			LrDevelopController.setAutoWhiteBalance()
+		end)
+		return ok
+	end
+
+	if cmd == "showClipping" then
+		ensureDevelop()
+		local ok = safeCall(function()
+			LrDevelopController.showClipping()
+		end)
+		return ok
+	end
+
+	if cmd == "convertToGrayscale" or cmd == "toggleGrayscale" then
+		ensureDevelop()
+		local photo, catalog, err = targetPhoto()
+		if err then
+			return false, err
+		end
+		local settings
+		local okRead = pcall(function()
+			settings = photo:getDevelopSettings()
+		end)
+		if not okRead or type(settings) ~= "table" then
+			return false, "cannot read develop settings"
+		end
+		local nextVal = true
+		if cmd == "toggleGrayscale" then
+			nextVal = not settings.ConvertToGrayscale
+		elseif msg.value == false or msg.value == 0 or msg.value == "false" then
+			nextVal = false
+		end
+		settings.ConvertToGrayscale = nextVal
+		local okWrite, writeErr = pcall(function()
+			catalog:withWriteAccessDo("B&W", function()
+				photo:applyDevelopSettings(settings)
+			end, { timeout = 5 })
+		end)
+		if not okWrite then
+			return false, tostring(writeErr)
+		end
+		return true, { ConvertToGrayscale = nextVal }
+	end
+
+	-- AI Enhance: denoise | rawDetails | superRes (Lightroom Classic 15.3+)
+	if cmd == "setEnhance" or cmd == "aiEnhance" then
+		ensureDevelop()
+		local param = msg.param or msg.enhance or "denoise"
+		local value = msg.value
+		if value == nil then
+			value = true
+		end
+		if value == "false" or value == 0 then
+			value = false
+		elseif value == "true" or value == 1 then
+			value = true
+		end
+		local denoiseAmount = tonumber(msg.denoiseAmount or msg.amount)
+		local ok = safeCall(function()
+			if denoiseAmount ~= nil then
+				LrDevelopController.setEnhance(param, value, denoiseAmount)
+			else
+				LrDevelopController.setEnhance(param, value)
+			end
+		end)
+		return ok
+	end
+
+	if cmd == "createSnapshot" then
+		ensureDevelop()
+		local photo, catalog, err = targetPhoto()
+		if err then
+			return false, err
+		end
+		local name = msg.name
+		if type(name) ~= "string" or name == "" then
+			name = os.date("SD %Y-%m-%d %H:%M:%S")
+		end
+		local ok = safeCall(function()
+			catalog:withWriteAccessDo("Create snapshot", function()
+				photo:createDevelopSnapshot(name, false)
+			end, { timeout = 5 })
+		end)
+		return ok, { name = name }
+	end
+
+	if cmd == "applySnapshot" then
+		ensureDevelop()
+		local photo, catalog, err = targetPhoto()
+		if err then
+			return false, err
+		end
+		local snaps
+		local okList = pcall(function()
+			snaps = photo:getDevelopSnapshots()
+		end)
+		if not okList or type(snaps) ~= "table" or #snaps == 0 then
+			return false, "no snapshots"
+		end
+		local target = snaps[#snaps]
+		if type(msg.name) == "string" and msg.name ~= "" then
+			for _, s in ipairs(snaps) do
+				local n
+				pcall(function()
+					n = s.name or (s.getName and s:getName())
+				end)
+				if n == msg.name then
+					target = s
+					break
+				end
+			end
+		elseif msg.index ~= nil then
+			local idx = tonumber(msg.index)
+			if idx and snaps[idx] then
+				target = snaps[idx]
+			end
+		end
+		local id = target
+		if type(target) == "table" then
+			id = target.id or target
+		end
+		local ok = safeCall(function()
+			catalog:withWriteAccessDo("Apply snapshot", function()
+				photo:applyDevelopSnapshot(id)
+			end, { timeout = 5 })
+		end)
+		return ok
+	end
+
+	if cmd == "listSnapshots" then
+		local photo, _, err = targetPhoto()
+		if err then
+			return false, err
+		end
+		local snaps = {}
+		pcall(function()
+			local list = photo:getDevelopSnapshots() or {}
+			for i, s in ipairs(list) do
+				local name
+				pcall(function()
+					name = s.name or (s.getName and s:getName()) or ("Snapshot " .. i)
+				end)
+				snaps[#snaps + 1] = { index = i, name = name or ("Snapshot " .. i) }
+			end
+		end)
+		return true, { snapshots = snaps }
 	end
 
 	if cmd == "listPresets" then

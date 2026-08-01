@@ -8,23 +8,49 @@
   <body>
     <sdpi-item label="Command">
       <sdpi-select setting="command" default="undo">
-        <option value="undo">Undo</option>
-        <option value="redo">Redo</option>
-        <option value="autoTone">Auto Tone</option>
-        <option value="resetAll">Reset All</option>
-        <option value="zoomToggle">Zoom Toggle</option>
-        <option value="zoomOneToOne">Zoom 1:1</option>
-        <option value="copySettings">Copy Settings</option>
-        <option value="pasteSettings">Paste Settings</option>
-        <option value="editInPhotoshop">Edit in Photoshop</option>
-        <option value="selectSubject">AI Select Subject</option>
-        <option value="selectSky">AI Select Sky</option>
-        <option value="selectBackground">AI Select Background</option>
-        <option value="selectPeople">AI Select People</option>
-        <option value="showModule">Switch Module</option>
-        <option value="showView">Switch View</option>
-        <option value="selectTool">Select Tool</option>
-        <option value="createMask">Create Mask</option>
+        <optgroup label="Edit">
+          <option value="undo">Undo</option>
+          <option value="redo">Redo</option>
+          <option value="copySettings">Copy Settings</option>
+          <option value="pasteSettings">Paste Settings</option>
+          <option value="syncSettings">Sync Settings (selection)</option>
+          <option value="editInPhotoshop">Edit in Photoshop</option>
+        </optgroup>
+        <optgroup label="Develop">
+          <option value="autoTone">Auto Tone</option>
+          <option value="autoWhiteBalance">Auto White Balance</option>
+          <option value="resetAll">Reset All</option>
+          <option value="showClipping">Show Clipping</option>
+          <option value="convertToGrayscale">Convert to B&amp;W</option>
+          <option value="toggleGrayscale">Toggle B&amp;W</option>
+          <option value="aiEnhance">AI Enhance</option>
+          <option value="createSnapshot">Create Snapshot</option>
+          <option value="applySnapshot">Apply Snapshot (latest/named)</option>
+        </optgroup>
+        <optgroup label="Zoom / View">
+          <option value="zoomToggle">Zoom Toggle</option>
+          <option value="zoomOneToOne">Zoom 1:1</option>
+          <option value="showModule">Switch Module</option>
+          <option value="showView">Switch View</option>
+          <option value="selectTool">Select Tool</option>
+        </optgroup>
+        <optgroup label="AI masks">
+          <option value="selectSubject">AI Select Subject</option>
+          <option value="selectSky">AI Select Sky</option>
+          <option value="selectBackground">AI Select Background</option>
+          <option value="selectPeople">AI Select People</option>
+          <option value="selectObjects">AI Select Objects</option>
+          <option value="selectLandscape">AI Select Landscape</option>
+        </optgroup>
+        <optgroup label="Manual / range masks">
+          <option value="maskBrush">Brush Mask</option>
+          <option value="maskLinear">Linear Gradient</option>
+          <option value="maskRadial">Radial Gradient</option>
+          <option value="maskRangeColor">Color Range</option>
+          <option value="maskRangeLuminance">Luminance Range</option>
+          <option value="maskRangeDepth">Depth Range</option>
+          <option value="createMask">Create Mask (custom)</option>
+        </optgroup>
       </sdpi-select>
     </sdpi-item>
     <sdpi-item label="Module">
@@ -57,6 +83,41 @@
         <option value="redeye">Red Eye</option>
         <option value="masking">Masking</option>
       </sdpi-select>
+    </sdpi-item>
+    <sdpi-item label="Mask type">
+      <sdpi-select setting="maskType" default="aiSelection">
+        <option value="aiSelection">AI Selection</option>
+        <option value="brush">Brush</option>
+        <option value="gradient">Linear Gradient</option>
+        <option value="radialGradient">Radial Gradient</option>
+        <option value="rangeMask">Range Mask</option>
+      </sdpi-select>
+    </sdpi-item>
+    <sdpi-item label="Mask subtype">
+      <sdpi-select setting="subtype" default="subject">
+        <option value="subject">Subject</option>
+        <option value="sky">Sky</option>
+        <option value="background">Background</option>
+        <option value="people">People</option>
+        <option value="objects">Objects</option>
+        <option value="landscape">Landscape</option>
+        <option value="color">Color Range</option>
+        <option value="luminance">Luminance Range</option>
+        <option value="depth">Depth Range</option>
+      </sdpi-select>
+    </sdpi-item>
+    <sdpi-item label="AI Enhance">
+      <sdpi-select setting="enhance" default="denoise">
+        <option value="denoise">Denoise</option>
+        <option value="rawDetails">Raw Details</option>
+        <option value="superRes">Super Resolution</option>
+      </sdpi-select>
+    </sdpi-item>
+    <sdpi-item label="Denoise amount">
+      <sdpi-textfield setting="denoiseAmount" placeholder="1–100 (optional)"></sdpi-textfield>
+    </sdpi-item>
+    <sdpi-item label="Snapshot name">
+      <sdpi-textfield setting="snapshotName" placeholder="Optional; empty = timestamp / latest"></sdpi-textfield>
     </sdpi-item>
     <sdpi-item label="Custom title">
       <sdpi-textfield setting="title" placeholder="Optional key title override"></sdpi-textfield>

@@ -34,8 +34,8 @@ echo "Installed Stream Deck plugin v${VERSION} (manifest ${MANIFEST_VER}) to:"
 echo "  $DEST"
 echo
 echo "Confirm update:"
-echo "  • Connection key ICON shows white “v1.3.2” at the bottom"
-echo "  • Connection title reads “v1.3.2 Online”"
+echo "  • Connection key ICON shows white “v1.4.0” at the bottom"
+echo "  • Connection title reads “v1.4.0 Online”"
 echo "  • Or run: ./scripts/verify-install.sh"
 echo
 echo "Next:"
