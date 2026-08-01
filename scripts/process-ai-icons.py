@@ -4,16 +4,26 @@
 from __future__ import annotations
 
 import json
+import os
 import shutil
 from pathlib import Path
 
-from PIL import Image, ImageDraw, ImageEnhance, ImageFilter, ImageFont, ImageOps
+try:
+    from PIL import Image, ImageDraw, ImageEnhance, ImageFilter, ImageFont, ImageOps
+except ImportError as e:
+    raise SystemExit(
+        "Pillow is required to regenerate icons.\n"
+        "  pip3 install pillow\n"
+        "Or skip icons (committed PNGs are already in the plugin):\n"
+        "  cd streamdeck && npm run build && npm run profiles"
+    ) from e
 
 ROOT = Path(__file__).resolve().parents[1]
-ASSETS = Path("/opt/cursor/artifacts/assets")
 OUT = ROOT / "streamdeck/com.cursor.lightroom.sdPlugin/imgs"
 MASTERS_KEEP = ROOT / "streamdeck/icon-masters"
-PREVIEW = Path("/opt/cursor/artifacts/icon-previews")
+# Optional staging dir for freshly generated masters (never /opt/cursor — that is agent-only)
+ASSETS = Path(os.environ["SDLR_ICON_ASSETS"]) if "SDLR_ICON_ASSETS" in os.environ else MASTERS_KEEP
+PREVIEW = ROOT / "streamdeck/icon-masters/.preview"
 
 LO = 72
 MID = 144
@@ -259,7 +269,7 @@ def main() -> None:
             x = 16 + (i % cols) * 104
             y = 16 + (i // cols) * 104
             sheet.paste(im, (x, y), im)
-        sheet_path = Path("/opt/cursor/artifacts/icon-sheet.png")
+        sheet_path = PREVIEW / "icon-sheet.png"
         sheet.save(sheet_path)
         print("preview sheet", sheet_path)
 

@@ -4,6 +4,7 @@ dist/
 .DS_Store
 streamdeck/com.cursor.lightroom.sdPlugin/bin/*.map
 streamdeck/com.cursor.lightroom.sdPlugin/logs/
+streamdeck/icon-masters/.preview/
 *.sdPlugin.zip
 .idea/
 .vscode/

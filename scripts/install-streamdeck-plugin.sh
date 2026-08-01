@@ -11,6 +11,7 @@ echo "Building Stream Deck plugin v${VERSION}…"
   if [[ ! -d node_modules ]]; then
     npm install
   fi
+  # Icons are already committed under imgs/ — do not regenerate (needs Pillow + masters).
   npm run build:all
   npm test
   node ../scripts/validate-profiles.mjs
