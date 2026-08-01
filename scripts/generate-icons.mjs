@@ -13,7 +13,7 @@ const outDir = path.join(__dirname, "../streamdeck/com.cursor.lightroom.sdPlugin
 const HI = 256;
 const LO = 72;
 const MID = 144;
-const VERSION_BADGE = "v1.2.4";
+const VERSION_BADGE = "v1.4.5";
 
 function crc32(buf) {
   let c = ~0;
