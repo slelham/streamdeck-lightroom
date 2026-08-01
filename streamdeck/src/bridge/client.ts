@@ -187,6 +187,7 @@ export class LightroomBridge extends EventEmitter {
   private requestInitialState(): void {
     if (!this._connected) return;
     void this.sendSafe({ cmd: "getState" });
+    void this.sendSafe({ cmd: "getFlagCounts" });
     void this.sendSafe({ cmd: "presetBrowser", action: "refresh", pageSize: 8 });
   }
 

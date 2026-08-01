@@ -21,7 +21,7 @@ local countCache = {
 	ttl = 4,
 	pick = 0,
 	reject = 0,
-	unflagged = nil,
+	lastError = nil,
 }
 
 local function catalog()
@@ -87,7 +87,6 @@ function Library.setLabelFilter(labels, opts)
 	end
 
 	local filter = blankLabelFilter()
-	-- Preserve some existing filter bits if available
 	local current = Library.getViewFilter()
 	if type(current) == "table" then
 		filter.whichCopies = current.whichCopies or filter.whichCopies
@@ -108,7 +107,6 @@ function Library.setLabelFilter(labels, opts)
 	end
 
 	if not any then
-		-- Clear attribute label filter
 		filter.filtersActive = false
 	else
 		filter.filtersActive = true
@@ -165,7 +163,6 @@ function Library.setPickFilter(pickMode, opts)
 		filter.pick = pickMode
 	else
 		filter.pick = ""
-		-- If no labels active either, turn filters off
 		local labelsOn = filter.label1 or filter.label2 or filter.label3 or filter.label4 or filter.label5 or filter.nolabel or filter.customLabel
 		if not labelsOn then
 			filter.filtersActive = false
@@ -201,29 +198,64 @@ function Library.summarizeFilter(filter)
 	}
 end
 
+local function countTable(photos)
+	if type(photos) ~= "table" then
+		return 0
+	end
+	local n = 0
+	for _ in ipairs(photos) do
+		n = n + 1
+	end
+	-- Some LR builds return map-like tables; fall back to #
+	if n == 0 and photos[1] == nil then
+		return #photos
+	end
+	return n
+end
+
+--- Try several searchDesc shapes — LR versions differ slightly.
 local function countByPick(value)
 	local cat = catalog()
 	if not cat then
 		return nil, "no catalog"
 	end
-	-- pick: 1 = flagged, 0 = unflagged, -1 = rejected (LrCatalog.findPhotos)
-	local ok, photos = pcall(function()
-		return cat:findPhotos {
-			searchDesc = {
+
+	local attempts = {
+		-- Flat descriptor (classic SDK docs)
+		{
+			criteria = "pick",
+			operation = "==",
+			value = value,
+			value2 = value,
+		},
+		-- Array form used by smart collections
+		{
+			{
 				criteria = "pick",
 				operation = "==",
 				value = value,
 				value2 = value,
 			},
-		}
-	end)
-	if not ok then
-		return nil, tostring(photos)
+		},
+		-- Without value2
+		{
+			criteria = "pick",
+			operation = "==",
+			value = value,
+		},
+	}
+
+	local lastErr = "findPhotos failed"
+	for _, desc in ipairs(attempts) do
+		local ok, photos = pcall(function()
+			return cat:findPhotos { searchDesc = desc }
+		end)
+		if ok and type(photos) == "table" then
+			return countTable(photos)
+		end
+		lastErr = tostring(photos)
 	end
-	if type(photos) ~= "table" then
-		return nil, "findPhotos returned non-table"
-	end
-	return #photos
+	return nil, lastErr
 end
 
 function Library.getFlagCounts(force)
@@ -232,13 +264,27 @@ function Library.getFlagCounts(force)
 		return {
 			pick = countCache.pick,
 			reject = countCache.reject,
-			totalFlagged = countCache.pick, -- picks only; reject separate
+			totalFlagged = countCache.pick,
 			cached = true,
+			error = countCache.lastError,
 		}
 	end
 
 	local pick, pickErr = countByPick(1)
 	local reject, rejectErr = countByPick(-1)
+
+	local err = pickErr or rejectErr
+	if pick == nil and reject == nil then
+		countCache.lastError = err
+		return {
+			pick = countCache.pick or 0,
+			reject = countCache.reject or 0,
+			totalFlagged = countCache.pick or 0,
+			cached = true,
+			error = err,
+		}
+	end
+
 	if pick == nil then
 		pick = countCache.pick or 0
 	end
@@ -249,13 +295,14 @@ function Library.getFlagCounts(force)
 	countCache.pick = pick
 	countCache.reject = reject
 	countCache.fetchedAt = now
+	countCache.lastError = err
 
 	return {
 		pick = pick,
 		reject = reject,
 		totalFlagged = pick,
 		cached = false,
-		error = pickErr or rejectErr,
+		error = err,
 	}
 end
 

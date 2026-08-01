@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * Sleek Stream Deck icons — dark rounded tiles + crisp glyphs.
- * Inspired by pro Lightroom profile packs (minimal, high-contrast, color-coded).
+ * Distinct Stream Deck action icons — unique glyphs per action, not a shared
+ * generic tile chrome. Soft AA, category colors, large readable symbols.
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -10,8 +10,8 @@ import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const outDir = path.join(__dirname, "../streamdeck/com.cursor.lightroom.sdPlugin/imgs");
-
-const SIZE = 144; // generate @2x, downscale copy for 1x via nearest later (we write both at 144 and 72)
+const HI = 144;
+const LO = 72;
 
 function crc32(buf) {
   let c = ~0;
@@ -31,38 +31,12 @@ function chunk(type, data) {
   return Buffer.concat([len, typeBuf, data, crc]);
 }
 
-function png(width, height, rgbaFn) {
-  const raw = Buffer.alloc((width * 4 + 1) * height);
-  for (let y = 0; y < height; y++) {
-    const row = y * (width * 4 + 1);
-    raw[row] = 0;
-    for (let x = 0; x < width; x++) {
-      const [r, g, b, a = 255] = rgbaFn(x, y, width, height);
-      const i = row + 1 + x * 4;
-      raw[i] = r;
-      raw[i + 1] = g;
-      raw[i + 2] = b;
-      raw[i + 3] = a;
-    }
-  }
-  const ihdr = Buffer.alloc(13);
-  ihdr.writeUInt32BE(width, 0);
-  ihdr.writeUInt32BE(height, 4);
-  ihdr[8] = 8;
-  ihdr[9] = 6;
-  return Buffer.concat([
-    Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
-    chunk("IHDR", ihdr),
-    chunk("IDAT", zlib.deflateSync(raw, { level: 9 })),
-    chunk("IEND", Buffer.alloc(0)),
-  ]);
-}
-
 function clamp(v, a, b) {
   return Math.max(a, Math.min(b, v));
 }
 
 function mix(a, b, t) {
+  t = clamp(t, 0, 1);
   return [
     Math.round(a[0] + (b[0] - a[0]) * t),
     Math.round(a[1] + (b[1] - a[1]) * t),
@@ -75,338 +49,82 @@ function dist(x, y, cx, cy) {
   return Math.hypot(x - cx, y - cy);
 }
 
-function softCircle(x, y, cx, cy, r, feather = 1.2) {
-  const d = dist(x, y, cx, cy);
-  if (d <= r - feather) return 1;
-  if (d >= r + feather) return 0;
-  return 1 - (d - (r - feather)) / (2 * feather);
+function sdfCircle(x, y, cx, cy, r) {
+  return dist(x, y, cx, cy) - r;
 }
 
-function roundedRectMask(x, y, w, h, m, rr) {
-  const left = m;
-  const top = m;
-  const right = w - m - 1;
-  const bottom = h - m - 1;
-  if (x < left || x > right || y < top || y > bottom) return 0;
-
-  const ix = x;
-  const iy = y;
-  // corner centers
-  const corners = [
-    [left + rr, top + rr],
-    [right - rr, top + rr],
-    [left + rr, bottom - rr],
-    [right - rr, bottom - rr],
-  ];
-  if (ix >= left + rr && ix <= right - rr) return 1;
-  if (iy >= top + rr && iy <= bottom - rr) return 1;
-  let best = 0;
-  for (const [cx, cy] of corners) {
-    best = Math.max(best, softCircle(ix, iy, cx, cy, rr, 1.1));
-  }
-  return best;
+function sdfBox(x, y, cx, cy, hw, hh) {
+  const dx = Math.abs(x - cx) - hw;
+  const dy = Math.abs(y - cy) - hh;
+  return Math.hypot(Math.max(dx, 0), Math.max(dy, 0)) + Math.min(Math.max(dx, dy), 0);
 }
 
-function strokeCircle(x, y, cx, cy, r, thickness) {
-  const d = dist(x, y, cx, cy);
-  const half = thickness / 2;
-  if (Math.abs(d - r) <= half) {
-    return 1 - Math.abs(d - r) / (half + 0.001);
-  }
-  return 0;
+function sdfRoundBox(x, y, cx, cy, hw, hh, r) {
+  return sdfBox(x, y, cx, cy, hw - r, hh - r) - r;
 }
 
-function strokeLine(x, y, x1, y1, x2, y2, thickness) {
+function sdfLine(x, y, x1, y1, x2, y2, thick) {
   const dx = x2 - x1;
   const dy = y2 - y1;
   const len2 = dx * dx + dy * dy || 1;
   let t = ((x - x1) * dx + (y - y1) * dy) / len2;
   t = clamp(t, 0, 1);
-  const px = x1 + t * dx;
-  const py = y1 + t * dy;
-  const d = Math.hypot(x - px, y - py);
-  const half = thickness / 2;
-  if (d <= half) return 1 - d / (half + 0.001);
-  return 0;
+  return dist(x, y, x1 + t * dx, y1 + t * dy) - thick;
+}
+
+function sdfCapsule(x, y, x1, y1, x2, y2, r) {
+  return sdfLine(x, y, x1, y1, x2, y2, 0) - r;
+}
+
+function opUnion(a, b) {
+  return Math.min(a, b);
+}
+
+function opSub(a, b) {
+  return Math.max(a, -b);
+}
+
+function cover(sdf, feather = 1.35) {
+  if (sdf <= -feather) return 1;
+  if (sdf >= feather) return 0;
+  return 1 - (sdf + feather) / (2 * feather);
 }
 
 function fillPoly(x, y, pts) {
-  // ray cast
   let inside = false;
   for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
     const xi = pts[i][0];
     const yi = pts[i][1];
     const xj = pts[j][0];
     const yj = pts[j][1];
-    const intersect = yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi + 0.0001) + xi;
-    if (intersect) inside = !inside;
+    if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi + 1e-9) + xi) inside = !inside;
   }
-  return inside ? 1 : 0;
+  return inside ? -1 : 1;
 }
 
-function starMask(x, y, cx, cy, rOuter, rInner, points = 5) {
+function starSdf(x, y, cx, cy, rOuter, rInner, points = 5) {
   const pts = [];
   for (let i = 0; i < points * 2; i++) {
     const ang = -Math.PI / 2 + (i * Math.PI) / points;
     const r = i % 2 === 0 ? rOuter : rInner;
     pts.push([cx + Math.cos(ang) * r, cy + Math.sin(ang) * r]);
   }
-  return fillPoly(x, y, pts);
-}
-
-function tileBackground(x, y, w, h, accent) {
-  const m = Math.round(w * 0.1);
-  const rr = Math.round(w * 0.2);
-  const mask = roundedRectMask(x, y, w, h, m, rr);
-  if (mask <= 0) return [0, 0, 0, 0];
-
-  // deep charcoal with subtle vertical gradient + top sheen
-  const t = y / (h - 1);
-  const base = mix([28, 30, 36, 255], [16, 17, 20, 255], t);
-  let color = y < h * 0.42 ? mix(base, [48, 52, 62, 255], (1 - y / (h * 0.42)) * 0.28) : base;
-
-  // thin accent underline (pro-pack style, not a thick footer)
-  const accentY0 = h - m - Math.max(2, Math.round(h * 0.035));
-  const accentY1 = h - m - 1;
-  if (y >= accentY0 && y <= accentY1 && x > m + rr * 0.35 && x < w - m - rr * 0.35) {
-    color = mix(color, accent, 0.92);
+  // Approximate SDF: negative inside, distance outside via edge samples
+  const inside = fillPoly(x, y, pts) < 0;
+  let d = Infinity;
+  for (let i = 0; i < pts.length; i++) {
+    const a = pts[i];
+    const b = pts[(i + 1) % pts.length];
+    d = Math.min(d, Math.abs(sdfLine(x, y, a[0], a[1], b[0], b[1], 0)));
   }
-
-  // soft accent rim
-  const inset = roundedRectMask(x, y, w, h, m + 1.2, Math.max(1, rr - 1));
-  if (mask > 0.25 && inset < 0.4) {
-    color = mix(color, accent, 0.18);
-  }
-
-  color[3] = Math.round(255 * mask);
-  return color;
+  return inside ? -d : d;
 }
 
-function drawGlyph(base, x, y, w, h, glyphFn, color, strength = 1) {
-  const g = glyphFn(x, y, w, h) * strength;
-  if (g <= 0) return base;
-  return mix(base, [...color.slice(0, 3), 255], clamp(g, 0, 1));
-}
-
-// —— Glyphs ——
-function glyphStar(x, y, w, h) {
-  return starMask(x, y, w / 2, h / 2 - h * 0.02, w * 0.22, w * 0.1, 5);
-}
-
-function glyphFlag(x, y, w, h) {
-  const cx = w * 0.42;
-  const top = h * 0.28;
-  const bot = h * 0.72;
-  const pole = strokeLine(x, y, cx, top, cx, bot, w * 0.045);
-  const flag = fillPoly(x, y, [
-    [cx + w * 0.02, top],
-    [cx + w * 0.28, top + h * 0.08],
-    [cx + w * 0.02, top + h * 0.2],
-  ]);
-  return Math.max(pole, flag);
-}
-
-function glyphReject(x, y, w, h) {
-  const cx = w / 2;
-  const cy = h / 2;
-  const r = w * 0.2;
-  const ring = strokeCircle(x, y, cx, cy, r, w * 0.05);
-  const bar = strokeLine(x, y, cx - r * 0.55, cy + r * 0.55, cx + r * 0.55, cy - r * 0.55, w * 0.05);
-  return Math.max(ring, bar);
-}
-
-function glyphChevron(dir) {
-  return (x, y, w, h) => {
-    const cx = w / 2;
-    const cy = h / 2;
-    const s = w * 0.12;
-    if (dir === "left") {
-      return Math.max(
-        strokeLine(x, y, cx + s, cy - s * 1.4, cx - s, cy, w * 0.055),
-        strokeLine(x, y, cx - s, cy, cx + s, cy + s * 1.4, w * 0.055),
-      );
-    }
-    return Math.max(
-      strokeLine(x, y, cx - s, cy - s * 1.4, cx + s, cy, w * 0.055),
-      strokeLine(x, y, cx + s, cy, cx - s, cy + s * 1.4, w * 0.055),
-    );
-  };
-}
-
-function glyphSlider(x, y, w, h) {
-  const cy = h * 0.5;
-  const x1 = w * 0.24;
-  const x2 = w * 0.76;
-  const track = strokeLine(x, y, x1, cy, x2, cy, w * 0.045);
-  const knob = softCircle(x, y, w * 0.6, cy, w * 0.085, 1.4);
-  const capL = softCircle(x, y, x1, cy, w * 0.035, 1);
-  const capR = softCircle(x, y, x2, cy, w * 0.035, 1);
-  return Math.max(track, knob, capL, capR);
-}
-
-function glyphDial(x, y, w, h) {
-  const cx = w / 2;
-  const cy = h / 2 + h * 0.02;
-  const r = w * 0.2;
-  const ring = strokeCircle(x, y, cx, cy, r, w * 0.05);
-  const needle = strokeLine(x, y, cx, cy, cx + r * 0.55, cy - r * 0.55, w * 0.045);
-  const hub = softCircle(x, y, cx, cy, w * 0.045, 0.8);
-  return Math.max(ring, needle, hub);
-}
-
-function glyphLink(x, y, w, h) {
-  const a = strokeCircle(x, y, w * 0.38, h * 0.5, w * 0.12, w * 0.045);
-  const b = strokeCircle(x, y, w * 0.62, h * 0.5, w * 0.12, w * 0.045);
-  const bridge = strokeLine(x, y, w * 0.42, h * 0.5, w * 0.58, h * 0.5, w * 0.045);
-  return Math.max(a, b, bridge);
-}
-
-function glyphLinkOff(x, y, w, h) {
-  const link = glyphLink(x, y, w, h);
-  const slash = strokeLine(x, y, w * 0.3, h * 0.7, w * 0.7, h * 0.3, w * 0.05);
-  return Math.max(link * 0.55, slash);
-}
-
-function glyphLabel(x, y, w, h) {
-  // palette / swatch
-  const c1 = softCircle(x, y, w * 0.38, h * 0.42, w * 0.1, 1);
-  const c2 = softCircle(x, y, w * 0.55, h * 0.38, w * 0.09, 1);
-  const c3 = softCircle(x, y, w * 0.48, h * 0.58, w * 0.095, 1);
-  return Math.max(c1, c2, c3);
-}
-
-function glyphCommand(x, y, w, h) {
-  // spark / bolt for commands
-  const pts = [
-    [w * 0.55, h * 0.26],
-    [w * 0.38, h * 0.52],
-    [w * 0.5, h * 0.52],
-    [w * 0.42, h * 0.74],
-    [w * 0.64, h * 0.46],
-    [w * 0.52, h * 0.46],
-  ];
-  return fillPoly(x, y, pts);
-}
-
-function glyphPreset(x, y, w, h) {
-  // three stacked rows — preset list metaphor
-  const bar = (yy, alpha) => {
-    const x1 = w * 0.28;
-    const x2 = w * 0.72;
-    const midY = yy + h * 0.045;
-    const onRow = y >= yy && y <= yy + h * 0.09;
-    if (!onRow || x < x1 || x > x2) return 0;
-    const edge = Math.min(x - x1, x2 - x, 4) / 4;
-    return alpha * clamp(edge, 0, 1);
-  };
-  return Math.max(bar(h * 0.32, 1), bar(h * 0.46, 0.85), bar(h * 0.6, 0.7));
-}
-
-function glyphCrop(x, y, w, h) {
-  const m = w * 0.3;
-  const s = w * 0.4;
-  const t = w * 0.045;
-  return Math.max(
-    strokeLine(x, y, m, m, m + s, m, t),
-    strokeLine(x, y, m, m, m, m + s, t),
-    strokeLine(x, y, m + s, m + s * 0.35, m + s, m + s, t),
-    strokeLine(x, y, m + s * 0.35, m + s, m + s, m + s, t),
-  );
-}
-
-function glyphMask(x, y, w, h) {
-  const left = softCircle(x, y, w * 0.42, h * 0.5, w * 0.16, 1.2);
-  const right = softCircle(x, y, w * 0.58, h * 0.5, w * 0.16, 1.2);
-  // crescent-ish: left filled, right subtract-ish via ring
-  const ring = strokeCircle(x, y, w * 0.5, h * 0.5, w * 0.2, w * 0.05);
-  return Math.max(left * (x < w * 0.52 ? 1 : 0.15), ring);
-}
-
-function glyphUndo(x, y, w, h) {
-  const cx = w * 0.52;
-  const cy = h * 0.5;
-  const r = w * 0.16;
-  // arc approximated by polyline strokes
-  let v = 0;
-  for (let a = 0.4; a < Math.PI * 1.35; a += 0.08) {
-    const ang = Math.PI * 0.15 + a;
-    const x1 = cx + Math.cos(ang) * r;
-    const y1 = cy + Math.sin(ang) * r;
-    const x2 = cx + Math.cos(ang + 0.1) * r;
-    const y2 = cy + Math.sin(ang + 0.1) * r;
-    v = Math.max(v, strokeLine(x, y, x1, y1, x2, y2, w * 0.045));
-  }
-  const tipX = cx + Math.cos(0.55) * r;
-  const tipY = cy + Math.sin(0.55) * r;
-  v = Math.max(
-    v,
-    strokeLine(x, y, tipX, tipY, tipX + w * 0.08, tipY - w * 0.02, w * 0.04),
-    strokeLine(x, y, tipX, tipY, tipX + w * 0.02, tipY + w * 0.08, w * 0.04),
-  );
-  return v;
-}
-
-function glyphSun(x, y, w, h) {
-  const cx = w / 2;
-  const cy = h / 2;
-  const core = softCircle(x, y, cx, cy, w * 0.1, 1);
-  let rays = 0;
-  for (let i = 0; i < 8; i++) {
-    const ang = (i * Math.PI) / 4;
-    const x1 = cx + Math.cos(ang) * w * 0.16;
-    const y1 = cy + Math.sin(ang) * w * 0.16;
-    const x2 = cx + Math.cos(ang) * w * 0.24;
-    const y2 = cy + Math.sin(ang) * w * 0.24;
-    rays = Math.max(rays, strokeLine(x, y, x1, y1, x2, y2, w * 0.035));
-  }
-  return Math.max(core, rays);
-}
-
-function makeIcon(accent, glyphFn, glyphColor = null) {
-  const ink = glyphColor || [245, 247, 250, 255];
-  return (x, y, w, h) => {
-    let px = tileBackground(x, y, w, h, accent);
-    if (px[3] === 0) return px;
-    px = drawGlyph(px, x, y, w, h, glyphFn, ink, 1);
-    return px;
-  };
-}
-
-const AMBER = [240, 176, 64, 255];
-const GREEN = [72, 200, 130, 255];
-const RED = [230, 84, 84, 255];
-const BLUE = [96, 168, 240, 255];
-const PURPLE = [180, 140, 255, 255];
-const SLATE = [170, 180, 195, 255];
-const GOLD = [255, 200, 72, 255];
-
-const icons = {
-  "plugin.png": makeIcon(AMBER, glyphSun, AMBER),
-  "category.png": makeIcon(AMBER, glyphSun, AMBER),
-  "actions/connection.png": makeIcon(GREEN, glyphLink, GREEN),
-  "actions/connection-on.png": makeIcon(GREEN, glyphLink, GREEN),
-  "actions/connection-off.png": makeIcon(RED, glyphLinkOff, RED),
-  "actions/rating.png": makeIcon(GOLD, glyphStar, GOLD),
-  "actions/flag.png": makeIcon(GREEN, glyphFlag, GREEN),
-  "actions/reject.png": makeIcon(RED, glyphReject, RED),
-  "actions/label.png": makeIcon(RED, glyphLabel, [255, 120, 120, 255]),
-  "actions/navigate.png": makeIcon(BLUE, glyphChevron("right"), BLUE),
-  "actions/navigate-left.png": makeIcon(BLUE, glyphChevron("left"), BLUE),
-  "actions/slider.png": makeIcon(AMBER, glyphSlider, AMBER),
-  "actions/slider-dial.png": makeIcon(AMBER, glyphDial, AMBER),
-  "actions/command.png": makeIcon(SLATE, glyphCommand, SLATE),
-  "actions/preset.png": makeIcon(PURPLE, glyphPreset, PURPLE),
-  "actions/crop.png": makeIcon(SLATE, glyphCrop, SLATE),
-  "actions/mask.png": makeIcon(PURPLE, glyphMask, PURPLE),
-  "actions/undo.png": makeIcon(SLATE, glyphUndo, SLATE),
-  "actions/auto.png": makeIcon(AMBER, glyphSun, AMBER),
-};
-
-function renderBuffer(size, rgbaFn) {
+function paint(size, draw) {
   const buf = Buffer.alloc(size * size * 4);
   for (let y = 0; y < size; y++) {
     for (let x = 0; x < size; x++) {
-      const [r, g, b, a = 255] = rgbaFn(x, y, size, size);
+      const [r, g, b, a] = draw(x + 0.5, y + 0.5, size);
       const i = (y * size + x) * 4;
       buf[i] = r;
       buf[i + 1] = g;
@@ -415,6 +133,26 @@ function renderBuffer(size, rgbaFn) {
     }
   }
   return buf;
+}
+
+function pngFromRgba(size, rgba) {
+  const raw = Buffer.alloc((size * 4 + 1) * size);
+  for (let y = 0; y < size; y++) {
+    const row = y * (size * 4 + 1);
+    raw[row] = 0;
+    rgba.copy(raw, row + 1, y * size * 4, (y + 1) * size * 4);
+  }
+  const ihdr = Buffer.alloc(13);
+  ihdr.writeUInt32BE(size, 0);
+  ihdr.writeUInt32BE(size, 4);
+  ihdr[8] = 8;
+  ihdr[9] = 6;
+  return Buffer.concat([
+    Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
+    chunk("IHDR", ihdr),
+    chunk("IDAT", zlib.deflateSync(raw, { level: 9 })),
+    chunk("IEND", Buffer.alloc(0)),
+  ]);
 }
 
 function boxDownscale(src, srcSize, dstSize) {
@@ -454,33 +192,278 @@ function boxDownscale(src, srcSize, dstSize) {
   return out;
 }
 
-function pngFromRgba(size, rgba) {
-  const raw = Buffer.alloc((size * 4 + 1) * size);
-  for (let y = 0; y < size; y++) {
-    const row = y * (size * 4 + 1);
-    raw[row] = 0;
-    rgba.copy(raw, row + 1, y * size * 4, (y + 1) * size * 4);
+/** Icon canvas: deep black, subtle vignette, NO shared footer chrome */
+function backdrop(x, y, s, tint) {
+  const m = s * 0.06;
+  const rr = s * 0.22;
+  const sdf = sdfRoundBox(x, y, s / 2, s / 2, s / 2 - m, s / 2 - m, rr);
+  const a = cover(sdf, 1.2);
+  if (a <= 0) return [0, 0, 0, 0];
+  const nx = (x / s - 0.5) * 2;
+  const ny = (y / s - 0.5) * 2;
+  const vignette = clamp(1 - (nx * nx + ny * ny) * 0.22, 0.75, 1);
+  const base = mix([18, 19, 22, 255], tint, 0.14);
+  const top = mix(base, [38, 40, 48, 255], clamp(1 - y / (s * 0.55), 0, 1) * 0.35);
+  const c = mix(top, [8, 8, 10, 255], 1 - vignette);
+  c[3] = Math.round(255 * a);
+  return c;
+}
+
+function layer(dst, cov, color, strength = 1) {
+  if (cov <= 0) return dst;
+  return mix(dst, [...color.slice(0, 3), 255], clamp(cov * strength, 0, 1) * ((color[3] ?? 255) / 255));
+}
+
+function glow(dst, sdf, color, radius = 10) {
+  if (sdf >= radius) return dst;
+  const g = clamp(1 - sdf / radius, 0, 1);
+  return mix(dst, [...color.slice(0, 3), 255], g * g * 0.28);
+}
+
+// —— Unique glyphs ——
+function drawFlag(x, y, s) {
+  const cx = s * 0.42;
+  const top = s * 0.26;
+  const bot = s * 0.78;
+  let d = sdfCapsule(x, y, cx, top, cx, bot, s * 0.028);
+  const flag = fillPoly(x, y, [
+    [cx + s * 0.02, top + s * 0.02],
+    [cx + s * 0.36, top + s * 0.12],
+    [cx + s * 0.02, top + s * 0.28],
+  ]);
+  d = opUnion(d, flag);
+  return d;
+}
+
+function drawReject(x, y, s) {
+  const cx = s / 2;
+  const cy = s / 2;
+  const r = s * 0.26;
+  let d = Math.abs(sdfCircle(x, y, cx, cy, r)) - s * 0.045;
+  d = opUnion(d, sdfCapsule(x, y, cx - r * 0.55, cy + r * 0.55, cx + r * 0.55, cy - r * 0.55, s * 0.04));
+  return d;
+}
+
+function drawStar(x, y, s) {
+  return starSdf(x, y, s / 2, s / 2 + s * 0.02, s * 0.3, s * 0.13, 5);
+}
+
+function drawChevron(x, y, s, dir) {
+  const cx = s / 2;
+  const cy = s / 2;
+  const a = s * 0.16;
+  if (dir < 0) {
+    return opUnion(
+      sdfCapsule(x, y, cx + a, cy - a * 1.35, cx - a * 0.85, cy, s * 0.042),
+      sdfCapsule(x, y, cx - a * 0.85, cy, cx + a, cy + a * 1.35, s * 0.042),
+    );
   }
-  const ihdr = Buffer.alloc(13);
-  ihdr.writeUInt32BE(size, 0);
-  ihdr.writeUInt32BE(size, 4);
-  ihdr[8] = 8;
-  ihdr[9] = 6;
-  return Buffer.concat([
-    Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
-    chunk("IHDR", ihdr),
-    chunk("IDAT", zlib.deflateSync(raw, { level: 9 })),
-    chunk("IEND", Buffer.alloc(0)),
+  return opUnion(
+    sdfCapsule(x, y, cx - a, cy - a * 1.35, cx + a * 0.85, cy, s * 0.042),
+    sdfCapsule(x, y, cx + a * 0.85, cy, cx - a, cy + a * 1.35, s * 0.042),
+  );
+}
+
+function drawSlider(x, y, s) {
+  const cy = s * 0.52;
+  let d = sdfCapsule(x, y, s * 0.2, cy, s * 0.8, cy, s * 0.035);
+  d = opUnion(d, sdfCircle(x, y, s * 0.62, cy, s * 0.11));
+  d = opUnion(d, sdfCircle(x, y, s * 0.2, cy, s * 0.045));
+  d = opUnion(d, sdfCircle(x, y, s * 0.8, cy, s * 0.045));
+  return d;
+}
+
+function drawDial(x, y, s) {
+  const cx = s / 2;
+  const cy = s / 2 + s * 0.02;
+  const r = s * 0.26;
+  let d = Math.abs(sdfCircle(x, y, cx, cy, r)) - s * 0.05;
+  d = opUnion(d, sdfCapsule(x, y, cx, cy, cx + r * 0.62, cy - r * 0.55, s * 0.04));
+  d = opUnion(d, sdfCircle(x, y, cx, cy, s * 0.055));
+  // tick marks
+  for (let i = 0; i < 14; i++) {
+    const ang = -Math.PI * 0.75 + (i / 13) * Math.PI * 1.5;
+    const x1 = cx + Math.cos(ang) * (r + s * 0.02);
+    const y1 = cy + Math.sin(ang) * (r + s * 0.02);
+    const x2 = cx + Math.cos(ang) * (r + s * 0.08);
+    const y2 = cy + Math.sin(ang) * (r + s * 0.08);
+    d = opUnion(d, sdfCapsule(x, y, x1, y1, x2, y2, s * 0.018));
+  }
+  return d;
+}
+
+function drawLink(x, y, s) {
+  const y0 = s / 2;
+  const left = sdfCircle(x, y, s * 0.36, y0, s * 0.14);
+  const right = sdfCircle(x, y, s * 0.64, y0, s * 0.14);
+  let d = Math.abs(left) - s * 0.045;
+  d = opUnion(d, Math.abs(right) - s * 0.045);
+  d = opUnion(d, sdfCapsule(x, y, s * 0.4, y0, s * 0.6, y0, s * 0.04));
+  return d;
+}
+
+function drawLinkOff(x, y, s) {
+  let d = drawLink(x, y, s);
+  d = opUnion(d, sdfCapsule(x, y, s * 0.28, s * 0.72, s * 0.72, s * 0.28, s * 0.045));
+  return d;
+}
+
+function drawSwatches(x, y, s) {
+  // three overlapping color dots — label metaphor
+  const c1 = sdfCircle(x, y, s * 0.36, s * 0.42, s * 0.14);
+  const c2 = sdfCircle(x, y, s * 0.58, s * 0.4, s * 0.13);
+  const c3 = sdfCircle(x, y, s * 0.48, s * 0.6, s * 0.135);
+  return { c1, c2, c3 };
+}
+
+function drawBolt(x, y, s) {
+  return fillPoly(x, y, [
+    [s * 0.58, s * 0.2],
+    [s * 0.34, s * 0.52],
+    [s * 0.5, s * 0.52],
+    [s * 0.4, s * 0.8],
+    [s * 0.68, s * 0.46],
+    [s * 0.52, s * 0.46],
   ]);
 }
+
+function drawLayers(x, y, s) {
+  let d = sdfRoundBox(x, y, s / 2, s * 0.38, s * 0.26, s * 0.07, s * 0.04);
+  d = opUnion(d, sdfRoundBox(x, y, s / 2, s * 0.52, s * 0.26, s * 0.07, s * 0.04));
+  d = opUnion(d, sdfRoundBox(x, y, s / 2, s * 0.66, s * 0.26, s * 0.07, s * 0.04));
+  return d;
+}
+
+function drawCrop(x, y, s) {
+  const m = s * 0.26;
+  const e = s * 0.74;
+  let d = sdfCapsule(x, y, m, m, e, m, s * 0.035);
+  d = opUnion(d, sdfCapsule(x, y, m, m, m, e, s * 0.035));
+  d = opUnion(d, sdfCapsule(x, y, e, m + s * 0.18, e, e, s * 0.035));
+  d = opUnion(d, sdfCapsule(x, y, m + s * 0.18, e, e, e, s * 0.035));
+  // corner ticks
+  d = opUnion(d, sdfCapsule(x, y, m - s * 0.06, m, m + s * 0.12, m, s * 0.03));
+  d = opUnion(d, sdfCapsule(x, y, m, m - s * 0.06, m, m + s * 0.12, s * 0.03));
+  return d;
+}
+
+function drawMask(x, y, s) {
+  const cx = s / 2;
+  const cy = s / 2;
+  const outer = sdfCircle(x, y, cx, cy, s * 0.28);
+  const cut = sdfCircle(x, y, cx + s * 0.1, cy, s * 0.22);
+  return opSub(outer, cut);
+}
+
+function drawUndo(x, y, s) {
+  const cx = s * 0.54;
+  const cy = s * 0.52;
+  const r = s * 0.22;
+  let d = Infinity;
+  for (let a = 0.35; a < Math.PI * 1.45; a += 0.06) {
+    const ang = 0.2 + a;
+    const x1 = cx + Math.cos(ang) * r;
+    const y1 = cy + Math.sin(ang) * r;
+    const x2 = cx + Math.cos(ang + 0.08) * r;
+    const y2 = cy + Math.sin(ang + 0.08) * r;
+    d = Math.min(d, sdfCapsule(x, y, x1, y1, x2, y2, s * 0.038));
+  }
+  const tipX = cx + Math.cos(0.55) * r;
+  const tipY = cy + Math.sin(0.55) * r;
+  d = opUnion(d, sdfCapsule(x, y, tipX, tipY, tipX + s * 0.12, tipY - s * 0.02, s * 0.035));
+  d = opUnion(d, sdfCapsule(x, y, tipX, tipY, tipX + s * 0.02, tipY + s * 0.12, s * 0.035));
+  return d;
+}
+
+function drawSun(x, y, s) {
+  const cx = s / 2;
+  const cy = s / 2;
+  let d = sdfCircle(x, y, cx, cy, s * 0.14);
+  for (let i = 0; i < 8; i++) {
+    const ang = (i * Math.PI) / 4 + Math.PI / 8;
+    d = opUnion(
+      d,
+      sdfCapsule(
+        x,
+        y,
+        cx + Math.cos(ang) * s * 0.22,
+        cy + Math.sin(ang) * s * 0.22,
+        cx + Math.cos(ang) * s * 0.34,
+        cy + Math.sin(ang) * s * 0.34,
+        s * 0.032,
+      ),
+    );
+  }
+  return d;
+}
+
+function makeIcon(tint, ink, sdfFn, multi) {
+  return (x, y, s) => {
+    let px = backdrop(x, y, s, tint);
+    if (px[3] === 0) return px;
+
+    if (multi) {
+      const parts = multi(x, y, s);
+      for (const { sdf, color } of parts) {
+        px = glow(px, sdf, color, s * 0.12);
+        px = layer(px, cover(sdf), color);
+      }
+      return px;
+    }
+
+    const sdf = sdfFn(x, y, s);
+    px = glow(px, sdf, ink, s * 0.14);
+    px = layer(px, cover(sdf), ink);
+    return px;
+  };
+}
+
+const GREEN = [64, 214, 140, 255];
+const RED = [245, 88, 88, 255];
+const GOLD = [255, 196, 64, 255];
+const AMBER = [255, 168, 56, 255];
+const BLUE = [88, 168, 255, 255];
+const PURPLE = [186, 140, 255, 255];
+const SLATE = [210, 218, 230, 255];
+const ROSE = [255, 120, 140, 255];
+const CYAN = [80, 220, 230, 255];
+
+const icons = {
+  "plugin.png": makeIcon(AMBER, AMBER, drawSun),
+  "category.png": makeIcon(AMBER, AMBER, drawSun),
+  "actions/connection.png": makeIcon([40, 90, 60, 255], GREEN, drawLink),
+  "actions/connection-on.png": makeIcon([40, 90, 60, 255], GREEN, drawLink),
+  "actions/connection-off.png": makeIcon([90, 40, 40, 255], RED, drawLinkOff),
+  "actions/rating.png": makeIcon([90, 70, 20, 255], GOLD, drawStar),
+  "actions/flag.png": makeIcon([30, 80, 50, 255], GREEN, drawFlag),
+  "actions/reject.png": makeIcon([90, 35, 35, 255], RED, drawReject),
+  "actions/label.png": makeIcon([80, 40, 50, 255], ROSE, null, (x, y, s) => {
+    const { c1, c2, c3 } = drawSwatches(x, y, s);
+    return [
+      { sdf: c1, color: [255, 90, 90, 255] },
+      { sdf: c2, color: [255, 210, 70, 255] },
+      { sdf: c3, color: [90, 160, 255, 255] },
+    ];
+  }),
+  "actions/navigate.png": makeIcon([30, 50, 90, 255], BLUE, (x, y, s) => drawChevron(x, y, s, 1)),
+  "actions/navigate-left.png": makeIcon([30, 50, 90, 255], BLUE, (x, y, s) => drawChevron(x, y, s, -1)),
+  "actions/slider.png": makeIcon([90, 60, 20, 255], AMBER, drawSlider),
+  "actions/slider-dial.png": makeIcon([90, 60, 20, 255], AMBER, drawDial),
+  "actions/command.png": makeIcon([50, 55, 70, 255], SLATE, drawBolt),
+  "actions/preset.png": makeIcon([60, 40, 90, 255], PURPLE, drawLayers),
+  "actions/crop.png": makeIcon([55, 60, 70, 255], SLATE, drawCrop),
+  "actions/mask.png": makeIcon([60, 40, 90, 255], PURPLE, drawMask),
+  "actions/undo.png": makeIcon([50, 55, 70, 255], CYAN, drawUndo),
+  "actions/auto.png": makeIcon([90, 60, 20, 255], AMBER, drawSun),
+};
 
 fs.mkdirSync(path.join(outDir, "actions"), { recursive: true });
 
 for (const [rel, fn] of Object.entries(icons)) {
   const file72 = path.join(outDir, rel);
   const file144 = file72.replace(/\.png$/, "@2x.png");
-  const hi = renderBuffer(SIZE, fn);
-  fs.writeFileSync(file144, pngFromRgba(SIZE, hi));
-  fs.writeFileSync(file72, pngFromRgba(72, boxDownscale(hi, SIZE, 72)));
+  const hi = paint(HI, fn);
+  fs.writeFileSync(file144, pngFromRgba(HI, hi));
+  fs.writeFileSync(file72, pngFromRgba(LO, boxDownscale(hi, HI, LO)));
   console.log("wrote", rel);
 }

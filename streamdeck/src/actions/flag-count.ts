@@ -7,6 +7,7 @@ import {
 } from "@elgato/streamdeck";
 
 import { bridge } from "../bridge/client";
+import { PLUGIN_VERSION_SHORT } from "../version";
 
 type FlagCountSettings = {
   /** What to show on the key */
@@ -31,14 +32,20 @@ export class FlagCountAction extends SingletonAction<FlagCountSettings> {
     const onPress = ev.payload.settings.onPress ?? "filter-pick";
     let ok = true;
 
+    if (!bridge.connected) {
+      await ev.action.showAlert();
+      await this.paint(ev.action, ev.payload.settings);
+      return;
+    }
+
     if (onPress === "filter-pick") {
-      const ack = await bridge.sendAndWait({ cmd: "setPickFilter", pick: "flagged" }, 3000);
+      const ack = await bridge.sendAndWait({ cmd: "setPickFilter", pick: "flagged" }, 4000);
       ok = Boolean(ack?.ok);
     } else if (onPress === "filter-reject") {
-      const ack = await bridge.sendAndWait({ cmd: "setPickFilter", pick: "rejected" }, 3000);
+      const ack = await bridge.sendAndWait({ cmd: "setPickFilter", pick: "rejected" }, 4000);
       ok = Boolean(ack?.ok);
     } else if (onPress === "clear-filter") {
-      const ack = await bridge.sendAndWait({ cmd: "clearViewFilter" }, 3000);
+      const ack = await bridge.sendAndWait({ cmd: "clearViewFilter" }, 4000);
       ok = Boolean(ack?.ok);
     }
 
@@ -48,14 +55,20 @@ export class FlagCountAction extends SingletonAction<FlagCountSettings> {
   }
 
   private async refreshCounts(): Promise<boolean> {
-    const ack = await bridge.sendAndWait({ cmd: "getFlagCounts" }, 4000);
-    return Boolean(ack?.ok);
+    if (!bridge.connected) return false;
+    const ack = await bridge.sendAndWait({ cmd: "getFlagCounts" }, 5000);
+    return Boolean(ack?.ok && bridge.state.flagCounts);
   }
 
   async paint(
     action: { setTitle(title: string): Promise<void> },
     settings: FlagCountSettings,
   ): Promise<void> {
+    if (!bridge.connected) {
+      await action.setTitle(`${PLUGIN_VERSION_SHORT}\nOffline`);
+      return;
+    }
+
     const counts = bridge.state.flagCounts;
     const pick = counts?.pick;
     const reject = counts?.reject;

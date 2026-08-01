@@ -2,6 +2,8 @@
 
 A free, open-source two-way plugin pair for **Adobe Lightroom Classic** and **Elgato Stream Deck** (XL, MK.2, Plus, and friends).
 
+**Current version: 1.3.0** — after install, the Connection key should read `v1.3 Online` (not just `LR Online`).
+
 Live slider values, culling feedback, dials, AI masks, a **live Develop preset browser**, and **polished profile packs** — over a local bridge. Nothing leaves your machine.
 
 > Not affiliated with Adobe or Elgato. Requires **Lightroom Classic** (not cloud-only Lightroom).
