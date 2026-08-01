@@ -3,10 +3,14 @@
 ]]
 
 local Config = {
+	-- Keep in sync with streamdeck/package.json + manifest Version
+	VERSION_STRING = "1.4.0",
 	-- Distinct from MIDI2LR defaults (58763/58764)
 	RECEIVE_PORT = 59837,
 	SEND_PORT = 59838,
+	-- Params mirrored into state.params for live key/dial feedback
 	BASIC_PARAMS = {
+		-- Basic
 		"Temperature",
 		"Tint",
 		"Exposure",
@@ -20,6 +24,33 @@ local Config = {
 		"Dehaze",
 		"Vibrance",
 		"Saturation",
+		-- Tone Curve (parametric)
+		"ParametricDarks",
+		"ParametricLights",
+		"ParametricShadows",
+		"ParametricHighlights",
+		"ParametricShadowSplit",
+		"ParametricMidtoneSplit",
+		"ParametricHighlightSplit",
+		-- Color Grading / Split Toning
+		"SplitToningShadowHue",
+		"SplitToningShadowSaturation",
+		"ColorGradeShadowLum",
+		"SplitToningHighlightHue",
+		"SplitToningHighlightSaturation",
+		"ColorGradeHighlightLum",
+		"ColorGradeMidtoneHue",
+		"ColorGradeMidtoneSat",
+		"ColorGradeMidtoneLum",
+		"ColorGradeGlobalHue",
+		"ColorGradeGlobalSat",
+		"ColorGradeGlobalLum",
+		"SplitToningBalance",
+		"ColorGradeBlending",
+		-- Detail (common dial targets)
+		"Sharpness",
+		"LuminanceSmoothing",
+		"ColorNoiseReduction",
 	},
 }
 

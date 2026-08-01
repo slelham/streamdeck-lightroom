@@ -3,24 +3,56 @@
   <head>
     <meta charset="utf-8" />
     <title>Develop Slider</title>
-    <script src="https://sdpi-toolkit.elgato.com/toolkit/v3/sdpi-components.js"></script>
+    <script src="sdpi-components.js"></script>
   </head>
   <body>
     <sdpi-item label="Parameter">
       <sdpi-select setting="param" default="Exposure">
-        <option value="Exposure">Exposure</option>
-        <option value="Contrast">Contrast</option>
-        <option value="Highlights">Highlights</option>
-        <option value="Shadows">Shadows</option>
-        <option value="Whites">Whites</option>
-        <option value="Blacks">Blacks</option>
-        <option value="Temperature">Temperature</option>
-        <option value="Tint">Tint</option>
-        <option value="Texture">Texture</option>
-        <option value="Clarity">Clarity</option>
-        <option value="Dehaze">Dehaze</option>
-        <option value="Vibrance">Vibrance</option>
-        <option value="Saturation">Saturation</option>
+        <optgroup label="Basic">
+          <option value="Exposure">Exposure</option>
+          <option value="Contrast">Contrast</option>
+          <option value="Highlights">Highlights</option>
+          <option value="Shadows">Shadows</option>
+          <option value="Whites">Whites</option>
+          <option value="Blacks">Blacks</option>
+          <option value="Temperature">Temperature</option>
+          <option value="Tint">Tint</option>
+          <option value="Texture">Texture</option>
+          <option value="Clarity">Clarity</option>
+          <option value="Dehaze">Dehaze</option>
+          <option value="Vibrance">Vibrance</option>
+          <option value="Saturation">Saturation</option>
+        </optgroup>
+        <optgroup label="Tone Curve">
+          <option value="ParametricShadows">Parametric Shadows</option>
+          <option value="ParametricDarks">Parametric Darks</option>
+          <option value="ParametricLights">Parametric Lights</option>
+          <option value="ParametricHighlights">Parametric Highlights</option>
+          <option value="ParametricShadowSplit">Shadow Split</option>
+          <option value="ParametricMidtoneSplit">Midtone Split</option>
+          <option value="ParametricHighlightSplit">Highlight Split</option>
+        </optgroup>
+        <optgroup label="Color Grading">
+          <option value="SplitToningShadowHue">Shadow Hue</option>
+          <option value="SplitToningShadowSaturation">Shadow Sat</option>
+          <option value="ColorGradeShadowLum">Shadow Lum</option>
+          <option value="ColorGradeMidtoneHue">Midtone Hue</option>
+          <option value="ColorGradeMidtoneSat">Midtone Sat</option>
+          <option value="ColorGradeMidtoneLum">Midtone Lum</option>
+          <option value="SplitToningHighlightHue">Highlight Hue</option>
+          <option value="SplitToningHighlightSaturation">Highlight Sat</option>
+          <option value="ColorGradeHighlightLum">Highlight Lum</option>
+          <option value="ColorGradeGlobalHue">Global Hue</option>
+          <option value="ColorGradeGlobalSat">Global Sat</option>
+          <option value="ColorGradeGlobalLum">Global Lum</option>
+          <option value="SplitToningBalance">Balance</option>
+          <option value="ColorGradeBlending">Blending</option>
+        </optgroup>
+        <optgroup label="Detail">
+          <option value="Sharpness">Sharpness</option>
+          <option value="LuminanceSmoothing">Luminance NR</option>
+          <option value="ColorNoiseReduction">Color NR</option>
+        </optgroup>
       </sdpi-select>
     </sdpi-item>
     <sdpi-item label="Direction">

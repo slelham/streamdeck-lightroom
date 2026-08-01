@@ -1,34 +1,30 @@
-# Suggested Stream Deck XL layout (32 keys)
+# Stream Deck XL layout (32 keys)
 
-A practical first page for culling + basic develop. Drag actions from **Lightroom Classic** in the Stream Deck action list.
+Two workspaces, inspired by pro Lightroom profile packs.
 
-## Row 1 — Cull
+## Page 1 — Library
 
-| Pick (toggle) | Reject (toggle) | ★1 | ★2 | ★3 | ★4 | ★5 | Unflag |
+| Pick | Reject | ★1 | ★2 | ★3 | ★4 | ★5 | Unflag |
 |---|---|---|---|---|---|---|---|
-
-- Flag actions: set **Toggle pick** / **Toggle reject**, enable **Auto-advance** if you like.
-- Rating actions: mode **Set rating**, stars 1–5, optional auto-advance.
-
-## Row 2 — Labels + nav
-
 | Red | Yellow | Green | Blue | Purple | Prev | Next | Connection |
+| Exp − | Exp + | Hi − | Hi + | Sh − | Sh + | Auto Tone | Auto WB |
+| Crop | Mask | Subject | Sky | Copy | Paste | Undo | Redo |
+
+- Flag actions: **Toggle pick** / **Toggle reject** (auto-advance on). Keys light when the photo matches.
+- Rating: **Set rating** 1–5 (active state when live rating matches).
+- Tone row uses **Develop Slider** (hold to repeat).
+
+## Page 2 — Develop
+
+| Folder − | Presets | Folder + | Page − | Page + | Temp − | Temp + | Connection |
 |---|---|---|---|---|---|---|---|
+| P1 | P2 | P3 | P4 | P5 | P6 | P7 | P8 |
+| PSh + | PHi + | MtHue | MtSat | Objects | Land | Snap | Sync |
+| Blue+Green | Flagged | P / R | Before | Zoom | Denoise | Bg | People |
 
-## Row 3 — Develop tone
+- Preset slots update live from Lightroom when the bridge is online.
+- Tone Curve / Color Grading sliders + extra AI masks, snapshot, sync, AI Denoise.
 
-| Exp − | Exp + | Hi − | Hi + | Sh − | Sh + | Auto Tone | Reset All |
-|---|---|---|---|---|---|---|---|
+## Icons
 
-Use **Develop Slider** actions; set parameter + direction. Hold a key to repeat.
-
-## Row 4 — Tools + finish
-
-| Crop | Masking | Select Subject | Select Sky | Copy | Paste | Undo | Redo |
-|---|---|---|---|---|---|---|---|
-
-Use **Lightroom Command** for these.
-
-## Folder idea
-
-Put a second page (folder) for Temperature/Tint/Clarity/Vibrance/Saturation and module/view switches so page 1 stays cull-focused.
+Action icons are dark rounded tiles with crisp glyphs (amber develop, green pick, red reject, gold ratings, purple presets/masks). Live flag/rating/label keys use brighter **active** variants. Regenerate with `npm run icons`.
