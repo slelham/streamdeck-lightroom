@@ -4,6 +4,7 @@ import net from "node:net";
 import {
   DEFAULT_RECEIVE_PORT,
   DEFAULT_SEND_PORT,
+  type AckMessage,
   type BridgeCommand,
   type BridgeInbound,
   type LightroomState,
@@ -82,7 +83,7 @@ export class LightroomBridge extends EventEmitter {
   }
 
   /** Wait for an ack with matching id (best-effort). */
-  sendAndWait(command: BridgeCommand, timeoutMs = 2000): Promise<BridgeInbound | null> {
+  sendAndWait(command: BridgeCommand, timeoutMs = 2000): Promise<AckMessage | null> {
     const id = command.id ?? String(this.nextId++);
     const payload = { ...command, id };
 
@@ -96,7 +97,7 @@ export class LightroomBridge extends EventEmitter {
         if ((msg as { id?: string }).id === id) {
           clearTimeout(timer);
           this.off("ack", onAck);
-          resolve(msg);
+          resolve(msg as AckMessage);
         }
       };
 
@@ -230,14 +231,19 @@ export class LightroomBridge extends EventEmitter {
         changed = true;
       }
 
+      // Prefer nested flagCounts. Only treat top-level pick/reject as counts when
+      // they are numbers — setPickFilter acks also carry pick: "flagged" (string).
       if (data.flagCounts && typeof data.flagCounts === "object") {
         next.flagCounts = data.flagCounts as LightroomState["flagCounts"];
         changed = true;
-      } else if (data.pick != null || data.reject != null) {
+      } else if (typeof data.pick === "number" || typeof data.reject === "number") {
+        const pick = typeof data.pick === "number" ? data.pick : Number(this.lastState.flagCounts?.pick ?? 0);
+        const reject =
+          typeof data.reject === "number" ? data.reject : Number(this.lastState.flagCounts?.reject ?? 0);
         next.flagCounts = {
-          pick: Number(data.pick ?? 0),
-          reject: Number(data.reject ?? 0),
-          totalFlagged: Number(data.totalFlagged ?? data.pick ?? 0),
+          pick,
+          reject,
+          totalFlagged: typeof data.totalFlagged === "number" ? data.totalFlagged : pick,
         };
         changed = true;
       }
