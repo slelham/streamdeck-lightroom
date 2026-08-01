@@ -2,6 +2,7 @@ import {
   action,
   type DialDownEvent,
   type DialRotateEvent,
+  type DidReceiveSettingsEvent,
   type TouchTapEvent,
   SingletonAction,
   type WillAppearEvent,
@@ -22,6 +23,10 @@ export class SliderDialAction extends SingletonAction<DialSettings> {
 
   override onWillAppear(ev: WillAppearEvent<DialSettings>): void {
     void this.paint(ev.action, ev.payload.settings);
+  }
+
+  override async onDidReceiveSettings(ev: DidReceiveSettingsEvent<DialSettings>): Promise<void> {
+    await this.paint(ev.action, ev.payload.settings);
   }
 
   override async onDialRotate(ev: DialRotateEvent<DialSettings>): Promise<void> {

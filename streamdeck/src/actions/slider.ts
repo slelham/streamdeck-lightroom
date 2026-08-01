@@ -1,5 +1,6 @@
 import {
   action,
+  type DidReceiveSettingsEvent,
   type KeyDownEvent,
   type KeyUpEvent,
   SingletonAction,
@@ -21,6 +22,10 @@ export class SliderAction extends SingletonAction<SliderSettings> {
 
   override onWillAppear(ev: WillAppearEvent<SliderSettings>): void {
     void this.paint(ev.action, ev.payload.settings);
+  }
+
+  override async onDidReceiveSettings(ev: DidReceiveSettingsEvent<SliderSettings>): Promise<void> {
+    await this.paint(ev.action, ev.payload.settings);
   }
 
   override async onKeyDown(ev: KeyDownEvent<SliderSettings>): Promise<void> {
