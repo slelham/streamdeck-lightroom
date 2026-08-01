@@ -4,7 +4,7 @@
 
 local Config = {
 	-- Keep in sync with streamdeck/package.json + manifest Version
-	VERSION_STRING = "1.4.2",
+	VERSION_STRING = "1.4.3",
 	-- Distinct from MIDI2LR defaults (58763/58764)
 	RECEIVE_PORT = 59837,
 	SEND_PORT = 59838,

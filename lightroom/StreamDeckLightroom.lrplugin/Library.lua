@@ -18,11 +18,15 @@ local LABEL_KEYS = {
 
 local countCache = {
 	fetchedAt = 0,
-	ttl = 3,
+	ttl = 2,
+	fp = "",
 	pick = 0,
 	reject = 0,
 	lastError = nil,
 	method = nil,
+	scope = nil,
+	sourceName = nil,
+	photoCount = nil,
 }
 
 local function catalog()
@@ -217,66 +221,14 @@ local function countTable(photos)
 	return n
 end
 
---- Smart-collection style searchDesc. Keep criteria simple (no value2 for ==).
-local function countByFindPhotos(value)
+local function countPickReject(photos)
+	local pick, reject = 0, 0
+	if type(photos) ~= "table" then
+		return 0, 0
+	end
 	local cat = catalog()
-	if not cat then
-		return nil, "no catalog"
-	end
-
-	local attempts = {
-		-- Canonical SDK form
-		{
-			criteria = "pick",
-			operation = "==",
-			value = value,
-		},
-		-- Combined form some Lr builds prefer
-		{
-			combine = "intersect",
-			{
-				criteria = "pick",
-				operation = "==",
-				value = value,
-			},
-		},
-	}
-
-	local lastErr = nil
-	for _, desc in ipairs(attempts) do
-		local ok, photos = taskPcall(function()
-			return cat:findPhotos { searchDesc = desc }
-		end)
-		if ok and type(photos) == "table" then
-			local n = countTable(photos)
-			-- Empty can be a real zero OR a bad descriptor; caller may scan as fallback
-			return n, nil
-		end
-		lastErr = tostring(photos)
-	end
-	return nil, lastErr or "findPhotos failed"
-end
-
---- Reliable fallback: scan catalog pickStatus (must allow yield via LrTasks.pcall).
-local function countByScan()
-	local cat = catalog()
-	if not cat then
-		return nil, nil, "no catalog"
-	end
-
-	local ok, photos = taskPcall(function()
-		return cat:getAllPhotos()
-	end)
-	if not ok or type(photos) ~= "table" then
-		return nil, nil, "getAllPhotos failed: " .. tostring(photos)
-	end
-
-	local pick = 0
-	local reject = 0
-
-	-- Prefer bulk metadata when available (much faster on large catalogs)
 	local bulkOk, bulk = pcall(function()
-		if cat.batchGetRawMetadata then
+		if cat and cat.batchGetRawMetadata then
 			return cat:batchGetRawMetadata(photos, { "pickStatus" })
 		end
 		return nil
@@ -294,9 +246,8 @@ local function countByScan()
 				reject = reject + 1
 			end
 		end
-		return pick, reject, nil
+		return pick, reject
 	end
-
 	for _, photo in ipairs(photos) do
 		local status = 0
 		pcall(function()
@@ -308,12 +259,183 @@ local function countByScan()
 			reject = reject + 1
 		end
 	end
-	return pick, reject, nil
+	return pick, reject
+end
+
+local function sourceLabel(source)
+	if type(source) == "string" then
+		return source
+	end
+	local name
+	pcall(function()
+		name = source:getName()
+	end)
+	if (not name or name == "") and source.getPath then
+		pcall(function()
+			name = source:getPath()
+		end)
+	end
+	return name or "source"
+end
+
+local function appendPhotos(dest, seen, list)
+	if type(list) ~= "table" then
+		return
+	end
+	for _, photo in ipairs(list) do
+		if photo ~= nil and not seen[photo] then
+			seen[photo] = true
+			dest[#dest + 1] = photo
+		end
+	end
+end
+
+--- Recurse collection sets into child collections.
+local function collectFromCollectionSet(set, dest, seen, depth)
+	if depth > 24 or set == nil then
+		return
+	end
+	local kids
+	pcall(function()
+		kids = set:getChildCollections()
+	end)
+	if type(kids) == "table" then
+		for _, col in ipairs(kids) do
+			local ok, photos = taskPcall(function()
+				return col:getPhotos()
+			end)
+			if ok then
+				appendPhotos(dest, seen, photos)
+			end
+		end
+	end
+	local nested
+	pcall(function()
+		nested = set:getChildCollectionSets()
+	end)
+	if type(nested) == "table" then
+		for _, child in ipairs(nested) do
+			collectFromCollectionSet(child, dest, seen, depth + 1)
+		end
+	end
+end
+
+local function photosFromSource(source, dest, seen)
+	if source == nil then
+		return "empty"
+	end
+	if type(source) == "string" then
+		-- Catalog specials: All Photographs / Quick Collection / etc.
+		local cat = catalog()
+		if not cat then
+			return "catalog"
+		end
+		local ok, photos = taskPcall(function()
+			return cat:getAllPhotos()
+		end)
+		if ok then
+			appendPhotos(dest, seen, photos)
+		end
+		return "catalog"
+	end
+
+	-- Folder: include subfolders (matches typical Library “show photos in subfolders”)
+	local okFolder, folderPhotos = taskPcall(function()
+		return source:getPhotos(true)
+	end)
+	if okFolder and type(folderPhotos) == "table" then
+		appendPhotos(dest, seen, folderPhotos)
+		return "folder"
+	end
+
+	-- Collection / published collection
+	local okCol, colPhotos = taskPcall(function()
+		return source:getPhotos()
+	end)
+	if okCol and type(colPhotos) == "table" then
+		appendPhotos(dest, seen, colPhotos)
+		return "collection"
+	end
+
+	-- Collection set
+	local before = #dest
+	collectFromCollectionSet(source, dest, seen, 0)
+	if #dest > before then
+		return "collectionSet"
+	end
+
+	return "unknown"
+end
+
+local function activeSourceFingerprint()
+	local cat = catalog()
+	if not cat then
+		return ""
+	end
+	local ok, sources = pcall(function()
+		return cat:getActiveSources()
+	end)
+	if not ok or type(sources) ~= "table" then
+		return ""
+	end
+	local parts = {}
+	for _, source in ipairs(sources) do
+		parts[#parts + 1] = sourceLabel(source)
+	end
+	return table.concat(parts, " + ")
+end
+
+--- Count flags in the Library source you’re viewing (folder / collection), not whole catalog.
+local function countByActiveSources()
+	local cat = catalog()
+	if not cat then
+		return nil, nil, { error = "no catalog" }
+	end
+
+	local ok, sources = taskPcall(function()
+		return cat:getActiveSources()
+	end)
+	if not ok or type(sources) ~= "table" or #sources == 0 then
+		return nil, nil, { error = "no active sources: " .. tostring(sources) }
+	end
+
+	local photos = {}
+	local seen = {}
+	local scopes = {}
+	local names = {}
+	local wholeCatalog = false
+
+	for _, source in ipairs(sources) do
+		names[#names + 1] = sourceLabel(source)
+		local scope = photosFromSource(source, photos, seen)
+		scopes[scope] = true
+		if scope == "catalog" then
+			wholeCatalog = true
+		end
+	end
+
+	local pick, reject = countPickReject(photos)
+	local scope = "activeSource"
+	if scopes.folder and not scopes.collection and not scopes.collectionSet then
+		scope = "folder"
+	elseif scopes.collection and not scopes.folder then
+		scope = "collection"
+	elseif wholeCatalog then
+		scope = "catalog"
+	end
+
+	return pick, reject, {
+		scope = scope,
+		sourceName = table.concat(names, " + "),
+		photoCount = #photos,
+		wholeCatalog = wholeCatalog,
+	}
 end
 
 function Library.getFlagCounts(force)
 	local now = os.time()
-	if not force and countCache.fetchedAt > 0 and (now - countCache.fetchedAt) < countCache.ttl then
+	local fp = activeSourceFingerprint()
+	if not force and countCache.fetchedAt > 0 and countCache.fp == fp and (now - countCache.fetchedAt) < countCache.ttl then
 		return {
 			pick = countCache.pick,
 			reject = countCache.reject,
@@ -321,49 +443,49 @@ function Library.getFlagCounts(force)
 			cached = true,
 			error = countCache.lastError,
 			method = countCache.method,
+			scope = countCache.scope,
+			sourceName = countCache.sourceName,
+			photoCount = countCache.photoCount,
 		}
 	end
 
-	local pick, pickErr = countByFindPhotos(1)
-	local reject, rejectErr = countByFindPhotos(-1)
-	local method = "findPhotos"
-	local err = pickErr or rejectErr
-
-	-- findPhotos often returns {} with a bad searchDesc instead of erroring — always try scan when zeros/nil
-	local needScan = (pick == nil and reject == nil) or ((pick or 0) == 0 and (reject or 0) == 0)
-	if needScan then
-		local sp, sr, sErr = countByScan()
-		if sp ~= nil then
-			if pick == nil or reject == nil or sp > (pick or 0) or sr > (reject or 0) or ((pick or 0) == 0 and (reject or 0) == 0 and (sp > 0 or sr > 0)) then
-				pick = sp
-				reject = sr
-				method = "scan"
-				err = nil
-			end
-		else
-			-- Keep findPhotos numbers if any; surface scan error
-			err = sErr or err
-			if pick == nil then
-				pick = 0
-			end
-			if reject == nil then
-				reject = 0
-			end
-		end
-	end
+	local pick, reject, meta = countByActiveSources()
+	local method = "activeSource"
+	local err = nil
+	meta = meta or {}
 
 	if pick == nil then
-		pick = countCache.pick or 0
-	end
-	if reject == nil then
-		reject = countCache.reject or 0
+		-- Last resort only when we cannot resolve the current Library source
+		err = meta.error or "active source count failed"
+		local ok, photos = taskPcall(function()
+			return catalog():getAllPhotos()
+		end)
+		if ok and type(photos) == "table" then
+			pick, reject = countPickReject(photos)
+			method = "catalogFallback"
+			meta.scope = "catalog"
+			meta.sourceName = meta.sourceName or "All Photographs"
+			meta.photoCount = #photos
+			err = (err or "") .. " (fell back to catalog)"
+		else
+			pick = countCache.pick or 0
+			reject = countCache.reject or 0
+			method = "cache"
+		end
+	else
+		method = meta.scope or "activeSource"
+		err = nil
 	end
 
 	countCache.pick = pick
 	countCache.reject = reject
 	countCache.fetchedAt = now
+	countCache.fp = fp
 	countCache.lastError = err
 	countCache.method = method
+	countCache.scope = meta.scope
+	countCache.sourceName = meta.sourceName
+	countCache.photoCount = meta.photoCount
 
 	return {
 		pick = pick,
@@ -372,11 +494,15 @@ function Library.getFlagCounts(force)
 		cached = false,
 		error = err,
 		method = method,
+		scope = meta.scope,
+		sourceName = meta.sourceName,
+		photoCount = meta.photoCount,
 	}
 end
 
 function Library.invalidateCounts()
 	countCache.fetchedAt = 0
+	countCache.fp = ""
 end
 
 return Library

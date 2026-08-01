@@ -35,6 +35,12 @@ export interface FlagCounts {
   reject?: number;
   totalFlagged?: number;
   cached?: boolean;
+  /** folder | collection | catalog | activeSource */
+  scope?: string;
+  sourceName?: string;
+  photoCount?: number;
+  method?: string;
+  error?: string;
 }
 
 export interface ViewFilterSummary {

@@ -1,8 +1,8 @@
 {
   "$schema": "https://schemas.elgato.com/streamdeck/plugins/manifest.json",
   "UUID": "com.cursor.lightroom",
-  "Name": "Lightroom Classic 1.4.2",
-  "Version": "1.4.2.0",
+  "Name": "Lightroom Classic 1.4.3",
+  "Version": "1.4.3.0",
   "Author": "Cursor",
   "Category": "Lightroom Classic",
   "CategoryIcon": "imgs/category",
@@ -29,10 +29,10 @@
   },
   "Actions": [
     {
-      "Name": "Connection \u00b7 v1.4.2",
+      "Name": "Connection \u00b7 v1.4.3",
       "UUID": "com.cursor.lightroom.connection",
       "Icon": "imgs/actions/connection",
-      "Tooltip": "Lightroom bridge status (plugin v1.4.2). Press to refresh. Title should read v1.4.2 Online.",
+      "Tooltip": "Lightroom bridge status (plugin v1.4.3). Press to refresh. Title should read v1.4.3 Online.",
       "Controllers": [
         "Keypad"
       ],
@@ -321,7 +321,7 @@
       "Name": "Flag Count",
       "UUID": "com.cursor.lightroom.flag-count",
       "Icon": "imgs/actions/flag",
-      "Tooltip": "Live count of flagged photos. Optionally filter the Library to flagged/rejects.",
+      "Tooltip": "Live count of flagged photos in the current Library folder/collection. Optionally filter to flagged/rejects.",
       "PropertyInspectorPath": "ui/flag-count.html",
       "Controllers": [
         "Keypad"
