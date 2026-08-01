@@ -55,6 +55,17 @@ local function targetPhoto()
 	return photo, catalog, nil
 end
 
+--- JSON / PI may send true, "true", or 1
+local function wantAdvance(v)
+	return v == true or v == 1 or v == "true" or v == "1"
+end
+
+local function advancePhoto()
+	-- Brief yield so flag/rating write settles before filmstrip moves
+	LrTasks.sleep(0.12)
+	LrSelection.nextPhoto()
+end
+
 function Actions.getState(opts)
 	opts = opts or {}
 	local state = {
@@ -144,27 +155,24 @@ function Actions.handle(msg)
 		if rating < 0 then rating = 0 end
 		if rating > 5 then rating = 5 end
 		LrSelection.setRating(rating)
-		if msg.advance then
-			LrTasks.sleep(0.05)
-			LrSelection.nextPhoto()
+		if wantAdvance(msg.advance) then
+			advancePhoto()
 		end
 		return true
 	end
 
 	if cmd == "increaseRating" then
 		LrSelection.increaseRating()
-		if msg.advance then
-			LrTasks.sleep(0.05)
-			LrSelection.nextPhoto()
+		if wantAdvance(msg.advance) then
+			advancePhoto()
 		end
 		return true
 	end
 
 	if cmd == "decreaseRating" then
 		LrSelection.decreaseRating()
-		if msg.advance then
-			LrTasks.sleep(0.05)
-			LrSelection.nextPhoto()
+		if wantAdvance(msg.advance) then
+			advancePhoto()
 		end
 		return true
 	end
@@ -180,9 +188,8 @@ function Actions.handle(msg)
 		end
 		Library.invalidateCounts()
 		-- Advance in the same task (separate nextPhoto races and can no-op)
-		if msg.advance and (flag == "pick" or flag == "reject") then
-			LrTasks.sleep(0.05)
-			LrSelection.nextPhoto()
+		if wantAdvance(msg.advance) and (flag == "pick" or flag == "reject") then
+			advancePhoto()
 		end
 		return true
 	end
@@ -190,9 +197,8 @@ function Actions.handle(msg)
 	if cmd == "label" then
 		local label = msg.label or "none"
 		LrSelection.setColorLabel(label)
-		if msg.advance and label ~= "none" then
-			LrTasks.sleep(0.05)
-			LrSelection.nextPhoto()
+		if wantAdvance(msg.advance) and label ~= "none" then
+			advancePhoto()
 		end
 		return true
 	end

@@ -158,7 +158,7 @@ function cmd(command, title, extra = {}, imageKey = "command") {
   );
 }
 function connection() {
-  return action("com.cursor.lightroom.connection", "Connection", {}, "v1.4.0", "connection");
+  return action("com.cursor.lightroom.connection", "Connection", {}, "v1.4.1", "connection");
 }
 function presetNav(navAction, title) {
   return action("com.cursor.lightroom.preset-nav", "Preset Browser Nav", { action: navAction }, title, "preset");

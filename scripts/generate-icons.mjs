@@ -441,7 +441,7 @@ const PURPLE = [180, 140, 255, 255];
 const SLATE = [220, 225, 235, 255];
 const CYAN = [80, 210, 220, 255];
 
-const VERSION_BADGE = "v1.4.0";
+const VERSION_BADGE = "v1.4.1";
 
 /** Active-state backdrop: slightly brighter rim so live keys pop */
 function makeActiveIcon(ink, sdfFn, multi) {

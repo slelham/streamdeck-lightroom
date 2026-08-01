@@ -29,6 +29,14 @@ local function catalog()
 	return LrApplication.activeCatalog()
 end
 
+--- Yield-safe pcall (Lua pcall around getAllPhotos causes "We can only wait from within a task")
+local function taskPcall(fn)
+	if LrTasks and LrTasks.pcall then
+		return LrTasks.pcall(fn)
+	end
+	return pcall(fn)
+end
+
 local function ensureLibrary()
 	local mod
 	pcall(function()
@@ -38,7 +46,9 @@ local function ensureLibrary()
 		pcall(function()
 			LrApplicationView.switchToModule("library")
 		end)
-		LrTasks.sleep(0.15)
+		if LrTasks.canYield and LrTasks.canYield() then
+			LrTasks.sleep(0.15)
+		end
 	end
 end
 
@@ -207,7 +217,7 @@ local function countTable(photos)
 	return n
 end
 
---- Smart-collection style searchDesc (combine required for array form).
+--- Smart-collection style searchDesc. Keep criteria simple (no value2 for ==).
 local function countByFindPhotos(value)
 	local cat = catalog()
 	if not cat then
@@ -215,52 +225,46 @@ local function countByFindPhotos(value)
 	end
 
 	local attempts = {
-		{
-			{
-				criteria = "pick",
-				operation = "==",
-				value = value,
-				value2 = value,
-			},
-			combine = "intersect",
-		},
-		{
-			{
-				criteria = "pick",
-				operation = "==",
-				value = value,
-				value2 = "",
-			},
-			combine = "intersect",
-		},
+		-- Canonical SDK form
 		{
 			criteria = "pick",
 			operation = "==",
 			value = value,
-			value2 = value,
+		},
+		-- Combined form some Lr builds prefer
+		{
+			combine = "intersect",
+			{
+				criteria = "pick",
+				operation = "==",
+				value = value,
+			},
 		},
 	}
 
 	local lastErr = nil
 	for _, desc in ipairs(attempts) do
-		local ok, photos = pcall(function()
+		local ok, photos = taskPcall(function()
 			return cat:findPhotos { searchDesc = desc }
 		end)
 		if ok and type(photos) == "table" then
-			return countTable(photos), nil
+			local n = countTable(photos)
+			-- Empty can be a real zero OR a bad descriptor; caller may scan as fallback
+			return n, nil
 		end
 		lastErr = tostring(photos)
 	end
 	return nil, lastErr or "findPhotos failed"
 end
 
---- Reliable fallback: scan catalog pickStatus (works when findPhotos mis-searches).
+--- Reliable fallback: scan catalog pickStatus (must allow yield via LrTasks.pcall).
 local function countByScan()
 	local cat = catalog()
 	if not cat then
 		return nil, nil, "no catalog"
 	end
-	local ok, photos = pcall(function()
+
+	local ok, photos = taskPcall(function()
 		return cat:getAllPhotos()
 	end)
 	if not ok or type(photos) ~= "table" then
@@ -269,10 +273,34 @@ local function countByScan()
 
 	local pick = 0
 	local reject = 0
+
+	-- Prefer bulk metadata when available (much faster on large catalogs)
+	local bulkOk, bulk = pcall(function()
+		if cat.batchGetRawMetadata then
+			return cat:batchGetRawMetadata(photos, { "pickStatus" })
+		end
+		return nil
+	end)
+	if bulkOk and type(bulk) == "table" then
+		for _, photo in ipairs(photos) do
+			local row = bulk[photo]
+			local status = 0
+			if type(row) == "table" then
+				status = tonumber(row.pickStatus) or 0
+			end
+			if status == 1 then
+				pick = pick + 1
+			elseif status == -1 then
+				reject = reject + 1
+			end
+		end
+		return pick, reject, nil
+	end
+
 	for _, photo in ipairs(photos) do
 		local status = 0
 		pcall(function()
-			status = photo:getRawMetadata("pickStatus") or 0
+			status = tonumber(photo:getRawMetadata("pickStatus")) or 0
 		end)
 		if status == 1 then
 			pick = pick + 1
@@ -301,21 +329,26 @@ function Library.getFlagCounts(force)
 	local method = "findPhotos"
 	local err = pickErr or rejectErr
 
-	-- If findPhotos fails OR returns zeros while we can scan, prefer scan.
-	-- (findPhotos often returns {} with a bad searchDesc instead of erroring.)
-	local needScan = (pick == nil and reject == nil) or (pick == 0 and reject == 0)
+	-- findPhotos often returns {} with a bad searchDesc instead of erroring — always try scan when zeros/nil
+	local needScan = (pick == nil and reject == nil) or ((pick or 0) == 0 and (reject or 0) == 0)
 	if needScan then
 		local sp, sr, sErr = countByScan()
 		if sp ~= nil then
-			-- Keep scan result if findPhotos was empty/failed, or scan found more
-			if pick == nil or reject == nil or sp > (pick or 0) or sr > (reject or 0) or (pick == 0 and reject == 0 and (sp > 0 or sr > 0)) then
+			if pick == nil or reject == nil or sp > (pick or 0) or sr > (reject or 0) or ((pick or 0) == 0 and (reject or 0) == 0 and (sp > 0 or sr > 0)) then
 				pick = sp
 				reject = sr
 				method = "scan"
-				err = sErr
+				err = nil
 			end
-		elseif pick == nil then
+		else
+			-- Keep findPhotos numbers if any; surface scan error
 			err = sErr or err
+			if pick == nil then
+				pick = 0
+			end
+			if reject == nil then
+				reject = 0
+			end
 		end
 	end
 

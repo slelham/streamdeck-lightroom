@@ -24,7 +24,9 @@ export class FlagAction extends SingletonAction<FlagSettings> {
     const settings = ev.payload.settings;
     const mode = settings.flag ?? "pick";
     const current = bridge.state.flag ?? 0;
-    const advance = asBool(settings.autoAdvance);
+    // Default ON for culling (profile keys + newly dragged keys)
+    const advance =
+      settings.autoAdvance === undefined ? true : asBool(settings.autoAdvance);
 
     let flag: "pick" | "reject" | "none" = "pick";
     if (mode === "toggle-pick") {
