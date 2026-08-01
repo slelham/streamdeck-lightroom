@@ -18,7 +18,7 @@ Live slider values, culling feedback, dials, AI masks, a **live Develop preset b
 | **Label filter** | One-tap Library filter for blue+green (or other label sets) |
 | **Flag count** | Live pick/reject counts; optional filter to flagged photos |
 | **Profile pack** | Auto-install layouts for XL, MK.2, and Plus |
-| Develop helpers | Auto Tone, reset, undo/redo, copy/paste, tools, before/after |
+| Develop helpers | Auto Tone, **Level horizon** (Upright), reset, undo/redo, copy/paste, tools, before/after |
 | AI masks | Subject / Sky / Background / People |
 
 ## Install

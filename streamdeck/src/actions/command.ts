@@ -23,6 +23,11 @@ type CommandSettings = {
     | "selectSky"
     | "selectBackground"
     | "selectPeople"
+    | "uprightLevel"
+    | "uprightAuto"
+    | "uprightVertical"
+    | "uprightFull"
+    | "uprightOff"
     | "showModule"
     | "showView"
     | "selectTool"
@@ -49,6 +54,11 @@ const LABELS: Record<string, string> = {
   selectSky: "Select\nSky",
   selectBackground: "Select\nBg",
   selectPeople: "Select\nPeople",
+  uprightLevel: "Level\nHorizon",
+  uprightAuto: "Upright\nAuto",
+  uprightVertical: "Upright\nVert",
+  uprightFull: "Upright\nFull",
+  uprightOff: "Upright\nOff",
 };
 
 @action({ UUID: "com.cursor.lightroom.command" })

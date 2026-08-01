@@ -383,6 +383,42 @@ function Actions.handle(msg)
 		return Actions.handle({ cmd = "createMask", maskType = "aiSelection", subtype = "people" })
 	end
 
+	-- Transform > Upright (closest SDK equivalent of auto horizon / straighten).
+	-- Crop panel "Auto" angle is not exposed; Level = horizon, Auto = full upright guess.
+	if cmd == "uprightLevel" or cmd == "uprightAuto" or cmd == "uprightVertical" or cmd == "uprightFull" or cmd == "uprightOff" then
+		ensureDevelop()
+		local mode = 3 -- Level
+		if cmd == "uprightAuto" then
+			mode = 1
+		elseif cmd == "uprightFull" then
+			mode = 2
+		elseif cmd == "uprightVertical" then
+			mode = 4
+		elseif cmd == "uprightOff" then
+			mode = 0
+		end
+		local catalog = LrApplication.activeCatalog()
+		if not catalog then
+			return false, "no catalog"
+		end
+		local photo = catalog:getTargetPhoto()
+		if not photo then
+			return false, "no photo selected"
+		end
+		local ok, err = pcall(function()
+			catalog:withWriteAccessDo("Upright", function()
+				photo:applyDevelopSettings({
+					EnableTransform = true,
+					PerspectiveUpright = mode,
+				})
+			end, { timeout = 8 })
+		end)
+		if not ok then
+			return false, tostring(err)
+		end
+		return true, { upright = mode }
+	end
+
 	if cmd == "copySettings" then
 		ensureDevelop()
 		local ok = safeCall(function()
