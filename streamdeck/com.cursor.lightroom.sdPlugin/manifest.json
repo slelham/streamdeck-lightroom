@@ -1,8 +1,8 @@
 {
   "$schema": "https://schemas.elgato.com/streamdeck/plugins/manifest.json",
   "UUID": "com.cursor.lightroom",
-  "Name": "Lightroom Classic 1.4.1",
-  "Version": "1.4.1.0",
+  "Name": "Lightroom Classic 1.4.2",
+  "Version": "1.4.2.0",
   "Author": "Cursor",
   "Category": "Lightroom Classic",
   "CategoryIcon": "imgs/category",
@@ -29,10 +29,10 @@
   },
   "Actions": [
     {
-      "Name": "Connection \u00b7 v1.4.1",
+      "Name": "Connection \u00b7 v1.4.2",
       "UUID": "com.cursor.lightroom.connection",
       "Icon": "imgs/actions/connection",
-      "Tooltip": "Lightroom bridge status (plugin v1.4.1). Press to refresh. Title should read v1.4.1 Online.",
+      "Tooltip": "Lightroom bridge status (plugin v1.4.2). Press to refresh. Title should read v1.4.2 Online.",
       "Controllers": [
         "Keypad"
       ],

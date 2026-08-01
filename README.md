@@ -2,7 +2,7 @@
 
 A free, open-source two-way plugin pair for **Adobe Lightroom Classic** and **Elgato Stream Deck** (XL, MK.2, Mini, Neo, Plus, + XL).
 
-**Current version: 1.4.1** — after install, the Connection key icon shows `v1.4.1` at the bottom. Run `./scripts/verify-install.sh` to confirm.
+**Current version: 1.4.2** — after install, the Connection key icon shows `v1.4.2` at the bottom. Run `./scripts/verify-install.sh` to confirm.
 
 Live slider values, culling feedback, dials, AI masks, Tone Curve / Color Grading, snapshots, sync, AI Enhance, a **live Develop preset browser**, and **polished profile packs** — over a local bridge. Nothing leaves your machine.
 
