@@ -2,6 +2,8 @@
 # Print installed Stream Deck + Lightroom plugin versions on this machine.
 set -euo pipefail
 
+EXPECTED="1.3.1"
+
 if [[ "$(uname -s)" == "Darwin" ]]; then
   SD="$HOME/Library/Application Support/com.elgato.StreamDeck/Plugins/com.cursor.lightroom.sdPlugin"
   LR="$HOME/Library/Application Support/Adobe/Lightroom/Modules/StreamDeckLightroom.lrplugin"
@@ -14,24 +16,33 @@ echo "=== Stream Deck plugin ==="
 if [[ -f "$SD/manifest.json" ]]; then
   echo "Path: $SD"
   node -p "const j=require(process.argv[1]); 'Name: '+j.Name+'\nVersion: '+j.Version" "$SD/manifest.json"
-  if [[ -f "$SD/imgs/actions/connection.png" ]]; then
-    echo "Connection icon: present ($(wc -c < "$SD/imgs/actions/connection.png") bytes)"
-  else
-    echo "Connection icon: MISSING"
-  fi
 else
-  echo "NOT INSTALLED at $SD"
+  echo "NOT INSTALLED at:"
+  echo "  $SD"
 fi
 
 echo
 echo "=== Lightroom companion ==="
 if [[ -f "$LR/Config.lua" ]]; then
   echo "Path: $LR"
-  grep -E 'VERSION_STRING|LrPluginName' "$LR/Config.lua" "$LR/Info.lua" 2>/dev/null || true
+  grep -E 'VERSION_STRING' "$LR/Config.lua" || true
+  grep -E 'LrPluginName' "$LR/Info.lua" || true
+  if grep -q 'Plugin version' "$LR/Status.lua" 2>/dev/null; then
+    echo "Status.lua: includes version (good)"
+  else
+    echo "Status.lua: OLD (no version line) — re-run ./scripts/install-lightroom-plugin.sh"
+  fi
 else
-  echo "NOT INSTALLED at $LR"
+  echo "NOT INSTALLED at:"
+  echo "  $LR"
 fi
 
 echo
-echo "Expected for this release: Stream Deck Version 1.3.1.0, Lightroom VERSION_STRING 1.3.1"
-echo "Connection key icon should show white text v1.3.1 at the bottom."
+echo "Expected: VERSION_STRING \"${EXPECTED}\" and Stream Deck Version ${EXPECTED}.0"
+echo
+echo "If Status dialog shows Receive/Send connected = false:"
+echo "  1. Quit Lightroom completely"
+echo "  2. Fully quit Stream Deck (menu bar / tray)"
+echo "  3. Open Stream Deck first, then Lightroom"
+echo "  4. Press the Connection key — should go Online"
+echo "  5. File → Plug-in Extras → Stream Deck Bridge: Status — both should be true"
